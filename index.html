@@ -607,8 +607,32 @@ footer{
    ============================================================ */
 const SUPABASE_URL = "https://wpqbvxbmracrtmketehu.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_wWManFrgqCIfyVKryOugvA_hMEG2O7m";
+// Lock customizado: o SDK usa a Web Locks API (navigator.locks) para evitar
+// que múltiplas abas façam refresh de token ao mesmo tempo. Se uma aba antiga
+// trava/crasha com o lock ainda "preso", outras abas ficam esperando esse lock
+// para sempre e o app nunca chega a fazer a chamada de rede (apenas estoura o
+// timeout). Esse lock customizado usa a Web Locks API quando disponível, mas
+// com um prazo curto: se não conseguir o lock a tempo, segue sem ele em vez
+// de travar o app indefinidamente.
+async function nonBlockingLock(name, acquireTimeout, fn){
+  if (typeof navigator === "undefined" || !navigator.locks){
+    return fn();
+  }
+  try {
+    return await navigator.locks.request(
+      name,
+      { signal: AbortSignal.timeout(5000) }, // espera no máx. 5s pelo lock
+      () => fn()
+    );
+  } catch (err){
+    // Lock não liberado a tempo (aba antiga travada, etc.) — segue sem lock
+    console.warn("Lock de auth não obtido a tempo, seguindo sem lock:", err);
+    return fn();
+  }
+}
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, lock: nonBlockingLock }
 });
 
 /* ============================================================
