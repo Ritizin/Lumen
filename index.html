@@ -2460,9 +2460,21 @@ function withTimeout(promise, ms, label){
 async function bootstrap(){
   try {
     console.log("[DIAG] bootstrap iniciado, chamando getSession()...");
-    const { data: { session }, error: sessionError } = await withTimeout(sb.auth.getSession(), 15000, "verificar sessão");
-    console.log("[DIAG] getSession() retornou:", session, sessionError);
-    if (sessionError) throw sessionError;
+    let session = null;
+    try {
+      const result = await withTimeout(sb.auth.getSession(), 8000, "verificar sessão");
+      console.log("[DIAG] getSession() retornou:", result.data?.session, result.error);
+      if (result.error) throw result.error;
+      session = result.data.session;
+    } catch (sessionErr){
+      // Não deixa um getSession() travado (projeto pausado, bloqueador de
+      // anúncios, rede instável, etc.) derrubar o app inteiro: segue como
+      // deslogado, deixando a pessoa pelo menos ver a tela de login/feed
+      // público em vez de uma tela de erro fatal.
+      console.warn("[DIAG] Falha/timeout ao verificar sessão, seguindo como deslogado:", sessionErr);
+      toast("Não foi possível confirmar seu login agora. Tente entrar novamente se necessário.", "error");
+      session = null;
+    }
     state.session = session;
 
     if (session){
