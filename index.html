@@ -1,0 +1,2552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumen</title>
+<meta name="description" content="Galeria de wallpapers em alta resolução.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0f'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23e3a458'/%3E%3Cg stroke='%23e3a458' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='16' y1='4' x2='16' y2='8'/%3E%3Cline x1='16' y1='24' x2='16' y2='28'/%3E%3Cline x1='4' y1='16' x2='8' y2='16'/%3E%3Cline x1='24' y1='16' x2='28' y2='16'/%3E%3Cline x1='7.5' y1='7.5' x2='10.3' y2='10.3'/%3E%3Cline x1='21.7' y1='21.7' x2='24.5' y2='24.5'/%3E%3Cline x1='24.5' y1='7.5' x2='21.7' y2='10.3'/%3E%3Cline x1='10.3' y1='21.7' x2='7.5' y2='24.5'/%3E%3C/g%3E%3C/svg%3E">
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+/* ============================================================
+   TOKENS — Lumen design system
+   Conceito: uma sala escura de exposição onde cada wallpaper é
+   a única fonte de luz. Preto azulado profundo, acento âmbar
+   quente (a "luz"), serifa editorial para títulos, sans neutra
+   para interface.
+   ============================================================ */
+:root{
+  --ink-950: #0a0a0f;
+  --ink-900: #0f0f17;
+  --ink-850: #15151f;
+  --ink-800: #1b1b27;
+  --ink-700: #26262f;
+  --ink-600: #38384a;
+  --line: #2a2a38;
+  --paper: #ece6da;
+  --paper-dim: #b7b2a8;
+  --muted: #8a8a9a;
+  --amber: #e3a458;
+  --amber-bright: #f4c07a;
+  --amber-dim: #6b5230;
+  --danger: #d9685f;
+  --ok: #7fb88f;
+
+  --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-lift: 0 20px 50px -20px rgba(0,0,0,0.6);
+}
+
+@font-face{
+  font-family: "Fraunces";
+  src: local("Georgia");
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin: 0;
+  background: var(--ink-950);
+  background-image:
+    radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(227,164,88,0.08), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 100% 100%, rgba(227,164,88,0.04), transparent 60%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+::selection{ background: var(--amber-dim); color: var(--paper); }
+
+a{ color: inherit; text-decoration: none; }
+button{ font-family: inherit; cursor: pointer; }
+
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: var(--ink-950); }
+::-webkit-scrollbar-thumb{ background: var(--ink-700); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--ink-600); }
+
+/* Focus visível para acessibilidade */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.app{ min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ---------- HEADER ---------- */
+header.topbar{
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 20px;
+  padding: 14px 28px;
+  background: rgba(10,10,15,0.82);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+}
+.brand{
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--serif);
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.brand .logo-mark{
+  width: 32px; height: 32px; flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(227,164,88,0.35));
+}
+.brand .dot{
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 12px 2px rgba(227,164,88,0.7);
+}
+.brand small{
+  display: block; font-family: var(--sans); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--muted); text-transform: uppercase; font-weight: 600; margin-top: -2px;
+}
+
+.search-wrap{
+  flex: 1; max-width: 480px;
+  position: relative;
+}
+.search-wrap input{
+  width: 100%;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  padding: 10px 14px 10px 38px;
+  border-radius: 999px;
+  font-size: 14px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.search-wrap input:focus{ border-color: var(--amber-dim); background: var(--ink-800); outline: none; }
+.search-wrap input:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+.search-wrap svg{
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; stroke: var(--muted);
+}
+
+.nav-actions{ display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+.tab-btn{
+  background: transparent; border: 1px solid transparent; color: var(--paper-dim);
+  font-size: 13.5px; font-weight: 600; padding: 9px 14px; border-radius: 999px;
+  transition: all .15s ease;
+}
+.tab-btn:hover{ color: var(--paper); background: var(--ink-850); }
+.tab-btn.active{ color: var(--ink-950); background: var(--amber); }
+
+.btn{
+  border: 1px solid var(--line);
+  background: var(--ink-850);
+  color: var(--paper);
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all .15s ease;
+}
+.btn:hover{ background: var(--ink-800); border-color: var(--ink-600); }
+.btn-primary{
+  background: var(--amber); color: var(--ink-950); border-color: var(--amber);
+}
+.btn-primary:hover{ background: var(--amber-bright); border-color: var(--amber-bright); }
+.btn-ghost{ background: transparent; border-color: transparent; color: var(--muted); }
+.btn-ghost:hover{ color: var(--paper); background: var(--ink-850); }
+.btn-danger{ background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover{ background: rgba(217,104,95,0.12); }
+.btn:disabled{ opacity: 0.5; cursor: not-allowed; }
+.btn-sm{ padding: 6px 12px; font-size: 12.5px; }
+
+.avatar-chip{
+  display: flex; align-items: center; gap: 8px;
+  background: var(--ink-850); border: 1px solid var(--line);
+  padding: 6px 12px 6px 6px; border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+}
+.avatar-circle{
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: var(--ink-950);
+  text-transform: uppercase;
+}
+.role-badge{
+  font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--amber-dim); color: var(--amber-bright);
+  padding: 2px 7px; border-radius: 999px; font-weight: 700;
+}
+
+/* ---------- MAIN ---------- */
+main{ flex: 1; padding: 28px; max-width: 1500px; margin: 0 auto; width: 100%; }
+
+.category-rail{
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 20px;
+  scrollbar-width: none;
+}
+.category-rail::-webkit-scrollbar{ display: none; }
+.chip{
+  flex-shrink: 0;
+  background: var(--ink-850); border: 1px solid var(--line); color: var(--paper-dim);
+  padding: 7px 15px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  transition: all .15s ease;
+}
+.chip:hover{ border-color: var(--amber-dim); color: var(--paper); }
+.chip.active{ background: var(--amber); color: var(--ink-950); border-color: var(--amber); }
+
+/* Masonry grid via CSS columns — leve e responsivo */
+.masonry{
+  column-count: 5;
+  column-gap: 16px;
+}
+@media (max-width: 1400px){ .masonry{ column-count: 4; } }
+@media (max-width: 1100px){ .masonry{ column-count: 3; } }
+@media (max-width: 760px){ .masonry{ column-count: 2; column-gap: 10px; } main{ padding: 16px; } }
+@media (max-width: 480px){ .masonry{ column-count: 1; } }
+
+.card{
+  break-inside: avoid;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.card img{ display: block; width: 100%; height: auto; }
+.card .skeleton{
+  width: 100%; aspect-ratio: 3/4;
+  background: linear-gradient(110deg, var(--ink-850) 8%, var(--ink-800) 18%, var(--ink-850) 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer{ to{ background-position-x: -200%; } }
+
+.card-overlay{
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.15) 45%, transparent 70%);
+  opacity: 0; transition: opacity .2s ease;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 14px;
+}
+.card:hover .card-overlay{ opacity: 1; }
+.card-title{ font-family: var(--serif); font-size: 16px; line-height: 1.25; margin: 0 0 4px; }
+.card-meta{ font-size: 11.5px; color: var(--paper-dim); display: flex; align-items: center; gap: 6px; }
+.card-actions{
+  position: absolute; top: 10px; right: 10px; display: flex; gap: 6px;
+  opacity: 0; transition: opacity .2s ease;
+}
+.card:hover .card-actions{ opacity: 1; }
+.icon-btn{
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(10,10,15,0.7); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--paper);
+  transition: all .15s ease;
+}
+.icon-btn:hover{ background: var(--amber); color: var(--ink-950); }
+.icon-btn.danger:hover{ background: var(--danger); color: white; }
+.icon-btn svg{ width: 15px; height: 15px; }
+
+.empty-state{
+  text-align: center; padding: 90px 20px; color: var(--muted);
+}
+.empty-state .glyph{ font-size: 38px; margin-bottom: 14px; opacity: 0.6; }
+.empty-state h3{ font-family: var(--serif); color: var(--paper); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
+.empty-state p{ font-size: 14px; max-width: 360px; margin: 0 auto; line-height: 1.6; }
+
+/* ---------- AUTH GATE ---------- */
+.auth-shell{
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
+}
+.auth-card{
+  width: 100%; max-width: 400px;
+  background: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-lift);
+}
+.auth-card .brand{ justify-content: center; margin-bottom: 6px; }
+.auth-sub{ text-align: center; color: var(--muted); font-size: 13.5px; margin-bottom: 28px; }
+
+.field{ margin-bottom: 16px; }
+.field label{ display: block; font-size: 12.5px; font-weight: 600; color: var(--paper-dim); margin-bottom: 6px; }
+.field input{
+  width: 100%;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: border-color .15s ease;
+}
+.field input:focus{ border-color: var(--amber-dim); outline: none; }
+.field input:focus-visible{ outline: 2px solid var(--amber); outline-offset: 1px; }
+.field-hint{ font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+.strength-meter{ display: flex; gap: 4px; margin-top: 7px; }
+.strength-bar{ height: 3px; flex: 1; border-radius: 2px; background: var(--ink-700); transition: background .2s ease; }
+.strength-bar.on-weak{ background: var(--danger); }
+.strength-bar.on-mid{ background: var(--amber); }
+.strength-bar.on-strong{ background: var(--ok); }
+
+.auth-submit{ width: 100%; padding: 12px; font-size: 14.5px; margin-top: 6px; }
+.auth-switch{ text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
+.auth-switch button{ background: none; border: none; color: var(--amber); font-weight: 600; padding: 0; }
+
+.alert{
+  font-size: 13px; padding: 10px 13px; border-radius: var(--radius-sm); margin-bottom: 16px;
+  border: 1px solid transparent; line-height: 1.5;
+}
+.alert-error{ background: rgba(217,104,95,0.1); border-color: rgba(217,104,95,0.35); color: #f2a39c; }
+.alert-ok{ background: rgba(127,184,143,0.1); border-color: rgba(127,184,143,0.35); color: var(--ok); }
+
+/* ---------- MODAL (lightbox / upload) ---------- */
+.modal-backdrop{
+  position: fixed; inset: 0; background: rgba(5,5,8,0.78);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 24px;
+  animation: fadeIn .15s ease;
+}
+@keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+
+.modal{
+  background: var(--ink-900); border: 1px solid var(--line); border-radius: var(--radius);
+  max-width: 480px; width: 100%; padding: 28px; box-shadow: var(--shadow-lift);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h2{ font-family: var(--serif); font-size: 21px; margin: 0 0 4px; font-weight: 500; }
+.modal .modal-sub{ color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+.modal-close{
+  float: right; background: var(--ink-850); border: 1px solid var(--line);
+  width: 30px; height: 30px; border-radius: 50%; color: var(--paper-dim);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.lightbox{
+  max-width: 920px; width: 100%; padding: 0; display: flex; background: var(--ink-900);
+  border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line);
+}
+.lightbox img{ max-height: 86vh; width: auto; max-width: 60%; object-fit: contain; background: var(--ink-950); }
+.lightbox-info{ padding: 28px; width: 320px; display: flex; flex-direction: column; }
+.lightbox-info h2{ font-family: var(--serif); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
+.lightbox-info p{ color: var(--paper-dim); font-size: 13.5px; line-height: 1.6; margin: 0 0 20px; }
+.lightbox-actions{ margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 720px){
+  .lightbox{ flex-direction: column; max-height: 92vh; }
+  .lightbox img{ max-width: 100%; max-height: 50vh; }
+  .lightbox-info{ width: auto; }
+}
+
+.dropzone{
+  border: 2px dashed var(--line); border-radius: var(--radius-sm);
+  padding: 28px; text-align: center; color: var(--muted); font-size: 13px;
+  cursor: pointer; transition: all .15s ease; margin-bottom: 16px;
+}
+.dropzone:hover, .dropzone.drag{ border-color: var(--amber-dim); background: rgba(227,164,88,0.04); color: var(--paper-dim); }
+.dropzone strong{ color: var(--amber); display: block; margin-bottom: 4px; font-size: 14px; }
+.dropzone input{ display: none; }
+.preview-thumb{ width: 100%; max-height: 220px; object-fit: contain; border-radius: var(--radius-sm); margin-bottom: 16px; }
+
+.toast-stack{ position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+.toast{
+  background: var(--ink-900); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 16px; font-size: 13.5px; box-shadow: var(--shadow-lift);
+  display: flex; align-items: center; gap: 10px; min-width: 240px;
+  animation: slideIn .2s ease;
+}
+@keyframes slideIn{ from{ transform: translateX(20px); opacity: 0; } to{ transform: translateX(0); opacity: 1; } }
+.toast.ok{ border-left: 3px solid var(--ok); }
+.toast.error{ border-left: 3px solid var(--danger); }
+
+.loader-ring{
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--ink-700); border-top-color: var(--amber);
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+.page-loader{ flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 14px; }
+
+.hidden{ display: none !important; }
+
+footer{
+  text-align: center; padding: 22px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line);
+}
+
+@media (max-width: 680px){
+  header.topbar{ padding: 12px 14px; gap: 10px; }
+  .search-wrap{ display: none; }
+  .brand small{ display: none; }
+}
+
+/* ============================================================
+   BOARDS (pastas estilo Pinterest)
+   ============================================================ */
+.board-toolbar{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.board-toolbar h2{ font-family: var(--serif); font-size: 24px; font-weight: 500; margin: 0; }
+.board-toolbar p{ color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+
+.board-grid{
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.board-tile{
+  position: relative;
+  background: var(--ink-850); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px 16px 18px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transition: all .15s ease;
+  overflow: hidden;
+}
+.board-tile:hover{ border-color: var(--amber-dim); transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.board-tile .icon{ font-size: 38px; line-height: 1; }
+.board-tile .name{ font-family: var(--serif); font-size: 15.5px; font-weight: 500; }
+.board-tile .count{ font-size: 11.5px; color: var(--muted); }
+.board-tile .board-del{
+  position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity .15s ease; z-index: 2;
+}
+.board-tile:hover .board-del{ opacity: 1; }
+.board-tile-add{
+  border: 2px dashed var(--line); background: transparent; cursor: pointer;
+  color: var(--muted); justify-content: center;
+}
+.board-tile-add:hover{ border-color: var(--amber-dim); color: var(--paper-dim); }
+.board-tile-add .icon{ font-size: 28px; color: var(--amber); }
+.board-tile-cover{
+  position: absolute; inset: 0; background-size: cover; background-position: center;
+  opacity: 0.28; z-index: 0;
+}
+.board-tile > *:not(.board-tile-cover){ position: relative; z-index: 1; }
+.board-tile-privacy{
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  font-size: 10.5px; padding: 3px 8px; border-radius: 999px;
+  background: rgba(10,10,15,0.7); border: 1px solid var(--line); color: var(--paper-dim);
+}
+
+.icon-picker{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.icon-picker button{
+  font-size: 21px; width: 42px; height: 42px; border-radius: 10px;
+  background: var(--ink-850); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-picker button.active{ border-color: var(--amber); background: var(--ink-800); box-shadow: 0 0 0 1px var(--amber) inset; }
+
+.board-detail-header{ display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.board-detail-header .icon{ font-size: 30px; }
+.board-detail-header .titles{ flex: 1; }
+.board-detail-header h2{ font-family: var(--serif); font-size: 22px; font-weight: 500; margin: 0; }
+.board-detail-header p{ font-size: 12.5px; color: var(--muted); margin: 2px 0 0; }
+
+/* ============================================================
+   AUTOR / LIKES / COMENTÁRIOS
+   ============================================================ */
+.author-chip{
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+}
+.author-chip .avatar-circle{ width: 22px; height: 22px; font-size: 9.5px; }
+.author-chip span{ font-size: 12px; font-weight: 600; color: var(--paper-dim); }
+.author-chip:hover span{ color: var(--paper); }
+
+.card-footer-row{
+  display: flex; align-items: center; justify-content: space-between; margin-top: 8px;
+}
+.engage-row{ display: flex; align-items: center; gap: 12px; }
+.like-btn{
+  display: flex; align-items: center; gap: 5px; background: none; border: none;
+  color: var(--paper-dim); font-size: 12.5px; font-weight: 600; padding: 0;
+}
+.like-btn svg{ width: 16px; height: 16px; stroke: var(--paper-dim); fill: none; transition: all .15s ease; }
+.like-btn.liked svg{ fill: var(--danger); stroke: var(--danger); }
+.like-btn.liked{ color: var(--danger); }
+.like-btn:hover svg{ stroke: var(--danger); }
+.comment-count{ display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--paper-dim); }
+.comment-count svg{ width: 15px; height: 15px; stroke: var(--paper-dim); fill: none; }
+
+.lightbox-likes{ display: flex; align-items: center; gap: 14px; margin: 4px 0 18px; }
+
+.comments-section{ margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.comments-list{ overflow-y: auto; max-height: 220px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.comment-item{ font-size: 13px; line-height: 1.5; }
+.comment-item .c-head{ display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.comment-item .c-author{ font-weight: 700; color: var(--amber-bright); font-size: 12.5px; }
+.comment-item .c-time{ color: var(--muted); font-size: 11px; }
+.comment-item .c-body{ color: var(--paper-dim); word-break: break-word; }
+.comment-item .c-del{ background: none; border: none; color: var(--muted); font-size: 11px; padding: 0; margin-left: auto; }
+.comment-item .c-del:hover{ color: var(--danger); }
+.comment-empty{ color: var(--muted); font-size: 12.5px; text-align: center; padding: 10px 0; }
+.comment-form{ display: flex; gap: 8px; }
+.comment-form textarea{
+  flex: 1; resize: none; background: var(--ink-850); border: 1px solid var(--line); color: var(--paper);
+  border-radius: var(--radius-sm); padding: 9px 11px; font-size: 13px; font-family: inherit; min-height: 38px; max-height: 80px;
+}
+.comment-form textarea:focus{ border-color: var(--amber-dim); outline: none; }
+.comment-form button{ flex-shrink: 0; align-self: flex-end; }
+
+/* ============================================================
+   PERFIL
+   ============================================================ */
+.profile-header{
+  display: flex; align-items: center; gap: 22px;
+  background: var(--ink-900); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px; margin-bottom: 26px; flex-wrap: wrap;
+}
+.profile-avatar-lg{
+  width: 78px; height: 78px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: var(--ink-950); text-transform: uppercase;
+}
+.profile-info{ flex: 1; min-width: 200px; }
+.profile-info h2{ font-family: var(--serif); font-size: 24px; font-weight: 500; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.profile-meta{ font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+.profile-bio{ font-size: 13.5px; color: var(--paper-dim); line-height: 1.6; max-width: 520px; }
+.profile-bio-edit{ width: 100%; max-width: 480px; }
+.profile-bio-edit textarea{
+  width: 100%; background: var(--ink-850); border: 1px solid var(--line); color: var(--paper);
+  border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical; min-height: 60px;
+}
+.profile-actions{ display: flex; gap: 8px; margin-top: 10px; }
+.profile-section-title{ font-family: var(--serif); font-size: 17px; font-weight: 500; margin: 0 0 14px; color: var(--paper-dim); }
+
+/* ============================================================
+   CAPA DE PASTA / PRIVACIDADE
+   ============================================================ */
+.board-tile-cover{
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0.4; z-index: 0;
+}
+.board-tile > *:not(.board-tile-cover){ position: relative; z-index: 1; }
+.board-pub-badge{
+  position: absolute; top: 8px; left: 8px;
+  font-size: 9.5px; letter-spacing: 0.04em;
+  background: var(--amber-dim); color: var(--amber-bright);
+  padding: 2px 7px; border-radius: 999px; font-weight: 700;
+}
+.privacy-toggle{ display: flex; gap: 8px; margin-top: 4px; }
+.privacy-opt{
+  flex: 1; background: var(--ink-850); border: 1px solid var(--line); color: var(--paper-dim);
+  padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; transition: all .15s ease;
+}
+.privacy-opt.active{ border-color: var(--amber); color: var(--paper); background: var(--ink-800); box-shadow: 0 0 0 1px var(--amber) inset; }
+
+/* ============================================================
+   NOTIFICAÇÕES
+   ============================================================ */
+.notif-dot{
+  position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--danger); border: 1.5px solid var(--ink-950);
+}
+
+/* ============================================================
+   PAINEL ADMIN
+   ============================================================ */
+.admin-tabs{ display: flex; gap: 8px; margin: 4px 0 22px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.admin-user-list{ display: flex; flex-direction: column; gap: 10px; }
+.admin-user-row{
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--ink-850); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 16px;
+}
+.admin-user-info{ flex: 1; min-width: 160px; }
+.admin-user-name{ font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.admin-user-status{ font-size: 12px; margin-top: 2px; }
+.status-ok{ color: var(--ok); }
+.status-bad{ color: var(--danger); }
+.admin-user-actions{ display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-cat-list{ display: flex; flex-direction: column; gap: 8px; max-width: 480px; }
+.admin-cat-row{
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--ink-850); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.admin-search{ max-width: 360px; margin-bottom: 18px; }
+.reason-textarea{
+  width: 100%; min-height: 80px; background: var(--ink-850); border: 1px solid var(--line); color: var(--paper);
+  border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13.5px; font-family: inherit; resize: vertical;
+}
+.select-field{
+  width: 100%; background: var(--ink-850); border: 1px solid var(--line); color: var(--paper);
+  padding: 11px 13px; border-radius: var(--radius-sm); font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<div id="app" class="app">
+  <div class="page-loader" id="bootLoader">
+    <div class="loader-ring"></div> carregando lumen…
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* ============================================================
+   CONFIG SUPABASE
+   ============================================================ */
+const SUPABASE_URL = "https://wpqbvxbmracrtmketehu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_wWManFrgqCIfyVKryOugvA_hMEG2O7m";
+// Lock customizado: o SDK usa a Web Locks API (navigator.locks) para evitar
+// que múltiplas abas façam refresh de token ao mesmo tempo. Se uma aba antiga
+// trava/crasha com o lock ainda "preso", outras abas ficam esperando esse lock
+// para sempre e o app nunca chega a fazer a chamada de rede (apenas estoura o
+// timeout). Esse lock customizado usa a Web Locks API quando disponível, mas
+// com um prazo curto: se não conseguir o lock a tempo, segue sem ele em vez
+// de travar o app indefinidamente.
+async function nonBlockingLock(name, acquireTimeout, fn){
+  console.log("[DIAG] lock chamado:", name);
+  if (typeof navigator === "undefined" || !navigator.locks){
+    console.log("[DIAG] navigator.locks indisponível, chamando fn() direto");
+    return fn();
+  }
+  try {
+    console.log("[DIAG] tentando adquirir lock...");
+    const result = await navigator.locks.request(
+      name,
+      { signal: AbortSignal.timeout(5000) }, // espera no máx. 5s pelo lock
+      () => { console.log("[DIAG] lock adquirido, chamando fn()"); return fn(); }
+    );
+    console.log("[DIAG] fn() concluído via lock");
+    return result;
+  } catch (err){
+    // Lock não liberado a tempo (aba antiga travada, etc.) — segue sem lock
+    console.warn("[DIAG] Lock de auth não obtido a tempo, seguindo sem lock:", err);
+    const result = await fn();
+    console.log("[DIAG] fn() concluído sem lock");
+    return result;
+  }
+}
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, lock: nonBlockingLock }
+});
+
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const state = {
+  session: null,
+  profile: null,       // { id, username, role, bio, avatar_color, banned, suspended_until, deleted, ... }
+  view: "feed",         // feed | boards | board-detail | profile | auth | admin
+  authMode: "login",    // login | signup
+  category: "todos",
+  search: "",
+  wallpapers: [],
+  boards: [],
+  activeBoard: null,
+  boardDetailOrigin: "boards", // boards | profile — pra onde o botão "voltar" leva
+  boardItems: [],
+  profileView: null,    // { profile, posts, publicBoards }
+  likeCounts: {},        // wallpaper_id -> count
+  myLikes: new Set(),    // wallpaper_ids curtidos pelo usuário atual
+  categories: [],         // categorias dinâmicas vindas do banco (sem o "todos", que é fixo)
+  blocked: null,           // { type: 'banned'|'suspended'|'deleted', reason, until } se a conta estiver bloqueada
+  notifications: [],       // avisos de moderação pro usuário atual
+  adminTab: "users",       // users | categories
+  adminUsers: [],
+  adminUserSearch: "",
+};
+
+// "todos" é fixo — não é uma categoria de verdade, é só o filtro "mostrar tudo"
+const BOARD_ICONS = ["📁", "🌄", "🌌", "🏙️", "🎨", "🌙", "🌊", "🌸", "🔥", "✨", "🍃", "🪐"];
+
+function categoryLabel(slug){
+  if (slug === "todos") return "Todos";
+  const found = state.categories.find(c => c.slug === slug);
+  return found ? found.label : slug;
+}
+
+/* ============================================================
+   HELPERS DE SEGURANÇA / VALIDAÇÃO
+   ============================================================ */
+
+// Sanitiza qualquer string antes de injetar como texto (defesa extra além do uso de textContent)
+function escapeHTML(str){
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+// Valida formato de e-mail no client (validação real e definitiva é feita pelo Supabase Auth)
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Username: 3-20 chars, letras/números/_ apenas — evita injeção em paths de storage e XSS
+function isValidUsername(u){
+  return /^[a-zA-Z0-9_]{3,20}$/.test(u);
+}
+
+// Avalia força de senha (heurística client-side; a senha em si nunca é armazenada por nós —
+// o Supabase Auth faz o hashing com bcrypt no servidor, nunca vemos nem guardamos o hash)
+function passwordStrength(pw){
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 2) return "weak";
+  if (score <= 4) return "mid";
+  return "strong";
+}
+
+// Decide se a conta está bloqueada (banida, suspensa/castigada, ou excluída) e por quê
+function computeBlockStatus(profile){
+  if (!profile) return null;
+  if (profile.deleted) return { type: "deleted", reason: profile.delete_reason };
+  if (profile.banned) return { type: "banned", reason: profile.ban_reason };
+  if (profile.suspended_until && new Date(profile.suspended_until) > new Date()){
+    return { type: "suspended", reason: profile.suspend_reason, until: profile.suspended_until };
+  }
+  return null;
+}
+
+function slugify(str){
+  return (str || "").toLowerCase().trim()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function sanitizeFilename(name){
+  return name.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/-+/g, "-").slice(-80);
+}
+
+function timeAgo(dateStr){
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+  if (diff < 60) return "agora";
+  if (diff < 3600) return `${Math.floor(diff/60)}min`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h`;
+  if (diff < 2592000) return `${Math.floor(diff/86400)}d`;
+  return new Date(dateStr).toLocaleDateString("pt-BR");
+}
+
+function initialsOf(username){
+  return (username || "?").slice(0, 2).toUpperCase();
+}
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_FILE_MB = 12;
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(msg, type = "ok"){
+  const stack = document.getElementById("toastStack");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .25s"; setTimeout(() => el.remove(), 250); }, 3200);
+}
+
+/* ============================================================
+   AUTH — login / cadastro / logout
+   ============================================================ */
+async function signUp(email, password, username){
+  if (!isValidEmail(email)) return { error: "E-mail inválido." };
+  if (!isValidUsername(username)) return { error: "Nome de usuário deve ter 3-20 caracteres (letras, números, _)." };
+  if (passwordStrength(password) === "weak") return { error: "Escolha uma senha mais forte (mín. 8 caracteres, misture letras e números)." };
+
+  // checa unicidade do username antes de tentar (RLS permite select pra authenticated apenas,
+  // então essa checagem de fato roda no signUp via metadata + trigger; erros de duplicidade
+  // vêm do constraint UNIQUE no banco)
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { username } }
+  });
+  if (error) return { error: translateAuthError(error.message) };
+  return { data };
+}
+
+async function signIn(email, password){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) return { error: translateAuthError(error.message) };
+  return { data };
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+}
+
+function translateAuthError(msg){
+  const map = {
+    "Invalid login credentials": "E-mail ou senha incorretos.",
+    "User already registered": "Já existe uma conta com esse e-mail.",
+    "Email not confirmed": "Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).",
+    "Password should be at least 6 characters": "A senha deve ter pelo menos 6 caracteres.",
+  };
+  for (const k in map) if (msg.includes(k)) return map[k];
+  return msg;
+}
+
+async function loadProfile(userId){
+  const { data, error } = await sb.from("profiles").select("id, username, role, bio, avatar_color, created_at, banned, ban_reason, suspended_until, suspend_reason, deleted, delete_reason").eq("id", userId).single();
+  if (error){ console.error("Erro ao carregar perfil:", error); return null; }
+  return data;
+}
+
+async function fetchProfileById(userId){
+  const { data, error } = await sb.from("profiles").select("id, username, role, bio, avatar_color, created_at, banned, ban_reason, suspended_until, suspend_reason, deleted, delete_reason").eq("id", userId).single();
+  if (error){ toast("Não foi possível carregar esse perfil.", "error"); return null; }
+  return data;
+}
+
+async function fetchUserPosts(userId){
+  const { data, error } = await sb.from("wallpapers").select("*, author:profiles(username, avatar_color)").eq("created_by", userId).order("created_at", { ascending: false });
+  if (error) return [];
+  const withUrls = data.map(w => ({ ...w, url: sb.storage.from("public-wallpapers").getPublicUrl(w.storage_path).data.publicUrl }));
+  await attachEngagementData(withUrls);
+  return withUrls;
+}
+
+async function updateOwnProfile({ bio }){
+  const { error } = await sb.from("profiles").update({ bio }).eq("id", state.profile.id);
+  if (error) return { error: error.message };
+  state.profile.bio = bio;
+  return { ok: true };
+}
+
+/* ============================================================
+   DATA — feed público + pasta privada
+   ============================================================ */
+async function fetchPublicWallpapers(){
+  const { data, error } = await sb.from("wallpapers").select("*, author:profiles(username, avatar_color)").order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar wallpapers.", "error"); return []; }
+  const items = data.map(w => ({ ...w, url: sb.storage.from("public-wallpapers").getPublicUrl(w.storage_path).data.publicUrl }));
+  await attachEngagementData(items);
+  return items;
+}
+
+async function attachEngagementData(items){
+  if (!items.length) return;
+  const ids = items.map(w => w.id);
+  const { data: likeRows } = await sb.from("likes").select("wallpaper_id, user_id").in("wallpaper_id", ids);
+  const { data: commentRows } = await sb.from("comments").select("id, wallpaper_id").in("wallpaper_id", ids);
+  state.likeCounts = {};
+  state.myLikes = new Set();
+  const commentCounts = {};
+  (likeRows || []).forEach(r => {
+    state.likeCounts[r.wallpaper_id] = (state.likeCounts[r.wallpaper_id] || 0) + 1;
+    if (state.session && r.user_id === state.session.user.id) state.myLikes.add(r.wallpaper_id);
+  });
+  (commentRows || []).forEach(r => { commentCounts[r.wallpaper_id] = (commentCounts[r.wallpaper_id] || 0) + 1; });
+  items.forEach(w => { w.comment_count = commentCounts[w.id] || 0; });
+}
+
+async function toggleLike(wallpaperId){
+  const liked = state.myLikes.has(wallpaperId);
+  if (liked){
+    state.myLikes.delete(wallpaperId);
+    state.likeCounts[wallpaperId] = Math.max(0, (state.likeCounts[wallpaperId] || 1) - 1);
+    await sb.from("likes").delete().eq("wallpaper_id", wallpaperId).eq("user_id", state.session.user.id);
+  } else {
+    state.myLikes.add(wallpaperId);
+    state.likeCounts[wallpaperId] = (state.likeCounts[wallpaperId] || 0) + 1;
+    const { error } = await sb.from("likes").insert({ wallpaper_id: wallpaperId, user_id: state.session.user.id });
+    if (error){ state.myLikes.delete(wallpaperId); state.likeCounts[wallpaperId]--; }
+  }
+}
+
+async function fetchComments(wallpaperId){
+  const { data, error } = await sb.from("comments").select("*, author:profiles(username)").eq("wallpaper_id", wallpaperId).order("created_at", { ascending: true });
+  if (error) return [];
+  return data;
+}
+
+async function addComment(wallpaperId, content){
+  const { data, error } = await sb.from("comments").insert({ wallpaper_id: wallpaperId, user_id: state.session.user.id, content }).select("*, author:profiles(username)").single();
+  if (error) return { error: error.message };
+  return { data };
+}
+
+async function deleteCommentRow(commentId){
+  const { error } = await sb.from("comments").delete().eq("id", commentId);
+  return { error };
+}
+
+/* ---------- CATEGORIAS (dinâmicas, gerenciadas pelo admin) ---------- */
+async function fetchCategories(){
+  const { data, error } = await sb.from("categories").select("*").order("label", { ascending: true });
+  if (error){ console.error("Erro ao carregar categorias:", error); return []; }
+  return data;
+}
+
+async function createCategory(label){
+  const slug = slugify(label);
+  if (!slug) return { error: "Nome de categoria inválido." };
+  if (slug === "todos") return { error: `"Todos" é reservado e não pode virar categoria.` };
+  const { data, error } = await sb.from("categories").insert({ slug, label: label.trim() }).select().single();
+  if (error) return { error: error.code === "23505" ? "Já existe uma categoria com esse nome." : error.message };
+  return { data };
+}
+
+async function renameCategory(id, label){
+  const { error } = await sb.from("categories").update({ label: label.trim() }).eq("id", id);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+async function deleteCategoryRow(category){
+  const { count } = await sb.from("wallpapers").select("id", { count: "exact", head: true }).eq("category", category.slug);
+  if (count > 0) return { error: `Não dá pra excluir: ${count} wallpaper(s) usam essa categoria. Renomeie em vez de excluir.` };
+  const { error } = await sb.from("categories").delete().eq("id", category.id);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+/* ---------- MODERAÇÃO (somente admin) ---------- */
+async function logModeration(targetUserId, actionType, reason){
+  await sb.from("moderation_actions").insert({
+    target_user_id: targetUserId, admin_id: state.profile.id, action_type: actionType, reason
+  });
+}
+
+async function notifyUser(userId, message){
+  await sb.from("notifications").insert({ user_id: userId, message });
+}
+
+async function fetchAllProfilesForAdmin(){
+  const { data, error } = await sb.from("profiles").select("*").order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar usuários.", "error"); return []; }
+  return data;
+}
+
+async function banUser(userId, reason){
+  const { error } = await sb.from("profiles").update({ banned: true, ban_reason: reason, banned_at: new Date().toISOString() }).eq("id", userId);
+  if (error) return { error: error.message };
+  await logModeration(userId, "ban", reason);
+  await notifyUser(userId, `Sua conta foi banida. Motivo: ${reason}`);
+  return { ok: true };
+}
+
+async function unbanUser(userId){
+  const { error } = await sb.from("profiles").update({ banned: false, ban_reason: null, banned_at: null }).eq("id", userId);
+  if (error) return { error: error.message };
+  await logModeration(userId, "unban", "Desbanido pelo admin.");
+  return { ok: true };
+}
+
+async function suspendUser(userId, untilIso, reason){
+  const { error } = await sb.from("profiles").update({ suspended_until: untilIso, suspend_reason: reason }).eq("id", userId);
+  if (error) return { error: error.message };
+  await logModeration(userId, "suspend", reason);
+  await notifyUser(userId, `Sua conta foi castigada (suspensa). Motivo: ${reason}`);
+  return { ok: true };
+}
+
+async function unsuspendUser(userId){
+  const { error } = await sb.from("profiles").update({ suspended_until: null, suspend_reason: null }).eq("id", userId);
+  if (error) return { error: error.message };
+  await logModeration(userId, "unsuspend", "Castigo removido pelo admin.");
+  return { ok: true };
+}
+
+async function deleteUserAccount(userId, reason){
+  const { error } = await sb.from("profiles").update({ deleted: true, delete_reason: reason, deleted_at: new Date().toISOString() }).eq("id", userId);
+  if (error) return { error: error.message };
+  await logModeration(userId, "delete_account", reason);
+  return { ok: true };
+}
+
+async function setUserRole(userId, role){
+  const { error } = await sb.from("profiles").update({ role }).eq("id", userId);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+async function fetchMyNotifications(){
+  const { data, error } = await sb.from("notifications").select("*").eq("user_id", state.session.user.id).order("created_at", { ascending: false }).limit(30);
+  if (error) return [];
+  return data;
+}
+
+async function markNotificationsRead(){
+  await sb.from("notifications").update({ read: true }).eq("user_id", state.session.user.id).eq("read", false);
+}
+
+/* ---------- BOARDS (pastas estilo Pinterest) ---------- */
+async function fetchBoards(userId){
+  const { data, error } = await sb.from("boards").select("*, board_items(count)").eq("owner_id", userId).order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar suas pastas.", "error"); return []; }
+  const boards = data.map(b => ({ ...b, item_count: b.board_items?.[0]?.count || 0 }));
+  await attachBoardCoverUrls(boards);
+  return boards;
+}
+
+async function fetchPublicBoardsForProfile(userId){
+  const { data, error } = await sb.from("boards").select("*, board_items(count)").eq("owner_id", userId).eq("is_public", true).order("created_at", { ascending: false });
+  if (error) return [];
+  const boards = data.map(b => ({ ...b, item_count: b.board_items?.[0]?.count || 0 }));
+  await attachBoardCoverUrls(boards);
+  return boards;
+}
+
+async function attachBoardCoverUrls(boards){
+  await Promise.all(boards.map(async b => {
+    if (b.cover_path){
+      const { data } = await sb.storage.from("private-wallpapers").createSignedUrl(b.cover_path, 3600);
+      b.cover_url = data?.signedUrl || null;
+    } else {
+      b.cover_url = null;
+    }
+  }));
+  return boards;
+}
+
+async function createBoard(name, icon, isPublic){
+  if (!name.trim()) return { error: "Dê um nome à pasta." };
+  const { data, error } = await sb.from("boards").insert({ owner_id: state.session.user.id, name: name.trim(), icon, is_public: !!isPublic }).select().single();
+  if (error) return { error: error.message };
+  return { data };
+}
+
+async function uploadBoardCover(boardId, file){
+  const ext = file.name.split(".").pop();
+  const path = `${state.session.user.id}/${boardId}/cover-${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage.from("private-wallpapers").upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: upErr.message };
+  const { error: dbErr } = await sb.from("boards").update({ cover_path: path }).eq("id", boardId);
+  if (dbErr) return { error: dbErr.message };
+  return { ok: true, path };
+}
+
+async function setBoardPublic(boardId, isPublic){
+  const { error } = await sb.from("boards").update({ is_public: isPublic }).eq("id", boardId);
+  if (error) return { error: error.message };
+  return { ok: true };
+}
+
+async function deleteBoardRow(board){
+  const { data: items } = await sb.from("board_items").select("storage_path").eq("board_id", board.id);
+  const paths = (items || []).map(i => i.storage_path);
+  if (board.cover_path) paths.push(board.cover_path);
+  if (paths.length){
+    await sb.storage.from("private-wallpapers").remove(paths);
+  }
+  const { error } = await sb.from("boards").delete().eq("id", board.id);
+  return { error };
+}
+
+async function fetchBoardItems(boardId){
+  const { data, error } = await sb.from("board_items").select("*").eq("board_id", boardId).order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar imagens da pasta.", "error"); return []; }
+  const withUrls = await Promise.all(data.map(async item => {
+    const { data: signed } = await sb.storage.from("private-wallpapers").createSignedUrl(item.storage_path, 3600);
+    return { ...item, url: signed?.signedUrl };
+  }));
+  return withUrls;
+}
+
+async function uploadBoardItem({ boardId, file, title }){
+  const ext = file.name.split(".").pop();
+  const path = `${state.session.user.id}/${boardId}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage.from("private-wallpapers").upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: upErr.message };
+
+  const dims = await getImageDimensions(file);
+  const { error: dbErr } = await sb.from("board_items").insert({
+    board_id: boardId, owner_id: state.session.user.id, title, storage_path: path, width: dims.width, height: dims.height
+  });
+  if (dbErr){ await sb.storage.from("private-wallpapers").remove([path]); return { error: dbErr.message }; }
+  return { ok: true };
+}
+
+async function deleteBoardItemRow(item){
+  await sb.storage.from("private-wallpapers").remove([item.storage_path]);
+  const { error } = await sb.from("board_items").delete().eq("id", item.id);
+  return { error };
+}
+
+async function uploadPublicWallpaper({ file, title, description, category }){
+  const ext = file.name.split(".").pop();
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage.from("public-wallpapers").upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: upErr.message };
+
+  const dims = await getImageDimensions(file);
+  const { error: dbErr } = await sb.from("wallpapers").insert({
+    title, description, category, storage_path: path,
+    width: dims.width, height: dims.height, created_by: state.profile.id
+  });
+  if (dbErr){ await sb.storage.from("public-wallpapers").remove([path]); return { error: dbErr.message }; }
+  return { ok: true };
+}
+
+async function deletePublicWallpaper(w){
+  await sb.storage.from("public-wallpapers").remove([w.storage_path]);
+  const { error } = await sb.from("wallpapers").delete().eq("id", w.id);
+  return { error };
+}
+
+function getImageDimensions(file){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.width, height: img.height });
+    img.onerror = () => resolve({ width: null, height: null });
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function validateImageFile(file){
+  if (!ALLOWED_MIME.includes(file.type)) return "Formato não suportado. Use JPG, PNG, WEBP ou AVIF.";
+  if (file.size > MAX_FILE_MB * 1024 * 1024) return `Arquivo muito grande (máx. ${MAX_FILE_MB}MB).`;
+  return null;
+}
+
+/* ============================================================
+   RENDER — shell raiz
+   ============================================================ */
+function render(){
+  const app = document.getElementById("app");
+  if (!state.session){
+    app.innerHTML = "";
+    app.appendChild(renderAuthGate());
+    return;
+  }
+  if (state.blocked){
+    app.innerHTML = "";
+    app.appendChild(renderBlockedGate());
+    return;
+  }
+  app.innerHTML = "";
+  app.appendChild(renderHeader());
+  const mainEl = document.createElement("main");
+
+  if (state.view === "feed"){
+    mainEl.appendChild(renderCategoryRail());
+    mainEl.appendChild(renderGrid());
+  } else if (state.view === "boards"){
+    mainEl.appendChild(renderBoardsView());
+  } else if (state.view === "board-detail"){
+    mainEl.appendChild(renderBoardDetail());
+  } else if (state.view === "profile"){
+    mainEl.appendChild(renderProfileView());
+  } else if (state.view === "admin"){
+    mainEl.appendChild(renderAdminView());
+  }
+
+  app.appendChild(mainEl);
+  app.appendChild(renderFooter());
+}
+
+/* ---------- HEADER ---------- */
+function renderHeader(){
+  const header = document.createElement("header");
+  header.className = "topbar";
+
+  const isAdmin = state.profile?.role === "admin";
+  const initials = initialsOf(state.profile?.username);
+  const unreadCount = state.notifications.filter(n => !n.read).length;
+
+  header.innerHTML = `
+    <div class="brand" id="brandHome">
+      <svg class="logo-mark" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#0a0a0f"/>
+        <circle cx="16" cy="16" r="5" fill="#e3a458"/>
+        <g stroke="#e3a458" stroke-width="2" stroke-linecap="round">
+          <line x1="16" y1="4" x2="16" y2="8"/><line x1="16" y1="24" x2="16" y2="28"/>
+          <line x1="4" y1="16" x2="8" y2="16"/><line x1="24" y1="16" x2="28" y2="16"/>
+          <line x1="7.5" y1="7.5" x2="10.3" y2="10.3"/><line x1="21.7" y1="21.7" x2="24.5" y2="24.5"/>
+          <line x1="24.5" y1="7.5" x2="21.7" y2="10.3"/><line x1="10.3" y1="21.7" x2="7.5" y2="24.5"/>
+        </g>
+      </svg>
+      <div><div>Lumen</div><small>Wallpapers</small></div>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar wallpapers…" value="${escapeHTML(state.search)}" ${state.view !== "feed" ? "disabled" : ""}>
+    </div>
+    <div class="nav-actions">
+      <button class="tab-btn ${state.view === "feed" ? "active" : ""}" id="tabFeed">Galeria</button>
+      <button class="tab-btn ${state.view === "boards" || state.view === "board-detail" ? "active" : ""}" id="tabBoards">Minhas pastas</button>
+      ${isAdmin ? `<button class="tab-btn ${state.view === "admin" ? "active" : ""}" id="tabAdmin">Painel admin</button>` : ""}
+      <button class="btn btn-primary btn-sm" id="btnUploadPublic">+ Postar</button>
+      <button class="icon-btn" id="btnNotif" title="Notificações" style="position:relative;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        ${unreadCount > 0 ? `<span class="notif-dot"></span>` : ""}
+      </button>
+      <div class="avatar-chip" id="avatarChip" style="cursor:pointer;">
+        <div class="avatar-circle">${initials}</div>
+        <span>${escapeHTML(state.profile?.username || "")}</span>
+        ${isAdmin ? `<span class="role-badge">admin</span>` : ""}
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Sair</button>
+    </div>
+  `;
+
+  header.querySelector("#brandHome").onclick = () => { state.view = "feed"; render(); refreshCurrentView(); };
+  header.querySelector("#tabFeed").onclick = () => { state.view = "feed"; render(); refreshCurrentView(); };
+  header.querySelector("#tabBoards").onclick = () => { state.view = "boards"; render(); refreshCurrentView(); };
+  if (isAdmin){
+    header.querySelector("#tabAdmin").onclick = async () => {
+      state.view = "admin";
+      render();
+      state.adminUsers = await fetchAllProfilesForAdmin();
+      state.categories = await fetchCategories();
+      renderMainOnly();
+    };
+  }
+  header.querySelector("#btnNotif").onclick = openNotificationsModal;
+  header.querySelector("#avatarChip").onclick = () => openProfile(state.session.user.id);
+  header.querySelector("#btnLogout").onclick = async () => { await signOut(); };
+
+  const searchInput = header.querySelector("#searchInput");
+  if (searchInput){
+    searchInput.oninput = debounce((e) => { state.search = e.target.value; renderMainOnly(); }, 200);
+  }
+
+  header.querySelector("#btnUploadPublic").onclick = () => openUploadModal("public");
+
+  return header;
+}
+
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+/* ---------- CATEGORY RAIL ---------- */
+function renderCategoryRail(){
+  const wrap = document.createElement("div");
+  wrap.className = "category-rail";
+  const all = [{ slug: "todos", label: "Todos" }, ...state.categories];
+  wrap.innerHTML = all.map(c =>
+    `<button class="chip ${state.category === c.slug ? "active" : ""}" data-cat="${c.slug}">${escapeHTML(c.label)}</button>`
+  ).join("");
+  wrap.querySelectorAll(".chip").forEach(chip => {
+    chip.onclick = () => { state.category = chip.dataset.cat; renderMainOnly(); };
+  });
+  return wrap;
+}
+
+/* ---------- GRID (feed público) ---------- */
+function renderGrid(){
+  const wrap = document.createElement("div");
+  wrap.id = "gridWrap";
+
+  let items = state.wallpapers;
+  if (state.category !== "todos") items = items.filter(w => w.category === state.category);
+  if (state.search.trim()){
+    const q = state.search.trim().toLowerCase();
+    items = items.filter(w => w.title.toLowerCase().includes(q) || (w.description || "").toLowerCase().includes(q));
+  }
+
+  if (items.length === 0){
+    wrap.innerHTML = renderEmptyState();
+    return wrap;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "masonry";
+
+  items.forEach(w => grid.appendChild(buildWallpaperCard(w)));
+
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function buildWallpaperCard(w){
+  const isOwner = state.session && w.created_by === state.session.user.id;
+  const canDelete = isOwner || state.profile?.role === "admin";
+  const liked = state.myLikes.has(w.id);
+  const likeCount = state.likeCounts[w.id] || 0;
+  const authorName = w.author?.username || "—";
+  const authorInitials = initialsOf(authorName);
+
+  const card = document.createElement("div");
+  card.className = "card";
+  const ratio = w.width && w.height ? `${w.width}/${w.height}` : "3/4";
+  card.innerHTML = `
+    <img src="${escapeHTML(w.url)}" alt="${escapeHTML(w.title)}" loading="lazy" style="aspect-ratio:${ratio}">
+    <div class="card-overlay">
+      <div class="card-title">${escapeHTML(w.title)}</div>
+      <div class="card-meta">${escapeHTML(categoryLabel(w.category))}</div>
+      <div class="card-footer-row">
+        <div class="author-chip" data-action="author">
+          <div class="avatar-circle">${escapeHTML(authorInitials)}</div>
+          <span>${escapeHTML(authorName)}</span>
+        </div>
+        <div class="engage-row">
+          <button class="like-btn ${liked ? "liked" : ""}" data-action="like">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            <span data-role="like-count">${likeCount}</span>
+          </button>
+          <span class="comment-count">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            ${w.comment_count || 0}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="icon-btn" title="Baixar" data-action="download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      ${canDelete ? `
+      <button class="icon-btn danger" title="Excluir" data-action="delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>` : ""}
+    </div>
+  `;
+  card.querySelector("img").onclick = () => openLightbox(w);
+  card.querySelector('[data-action="download"]').onclick = (e) => { e.stopPropagation(); downloadImage(w); };
+  card.querySelector('[data-action="author"]').onclick = (e) => { e.stopPropagation(); openProfile(w.created_by); };
+  card.querySelector('[data-action="like"]').onclick = async (e) => {
+    e.stopPropagation();
+    if (!state.session) return;
+    await toggleLike(w.id);
+    const btn = card.querySelector('[data-action="like"]');
+    btn.classList.toggle("liked", state.myLikes.has(w.id));
+    btn.querySelector('[data-role="like-count"]').textContent = state.likeCounts[w.id] || 0;
+  };
+  const delBtn = card.querySelector('[data-action="delete"]');
+  if (delBtn) delBtn.onclick = (e) => { e.stopPropagation(); confirmDelete(w); };
+  return card;
+}
+
+function renderEmptyState(){
+  return `<div class="empty-state">
+    <div class="glyph">◐</div>
+    <h3>Nada por aqui ainda</h3>
+    <p>${state.search ? "Nenhum resultado para essa busca." : "Seja o primeiro a postar um wallpaper na galeria."}</p>
+  </div>`;
+}
+
+function renderMainOnly(){
+  const mainEl = document.querySelector("main");
+  if (!mainEl) return;
+  mainEl.innerHTML = "";
+  if (state.view === "feed"){
+    mainEl.appendChild(renderCategoryRail());
+    mainEl.appendChild(renderGrid());
+  } else if (state.view === "boards"){
+    mainEl.appendChild(renderBoardsView());
+  } else if (state.view === "board-detail"){
+    mainEl.appendChild(renderBoardDetail());
+  } else if (state.view === "profile"){
+    mainEl.appendChild(renderProfileView());
+  } else if (state.view === "admin"){
+    mainEl.appendChild(renderAdminView());
+  }
+}
+
+function renderFooter(){
+  const f = document.createElement("footer");
+  f.textContent = "Lumen — sua galeria de wallpapers.";
+  return f;
+}
+
+/* ============================================================
+   BOARDS — view, criação e detalhe
+   ============================================================ */
+function renderBoardsView(){
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `
+    <div class="board-toolbar">
+      <div>
+        <h2>Minhas pastas</h2>
+        <p>Organize seus wallpapers favoritos em pastas privadas, só você vê.</p>
+      </div>
+    </div>
+  `;
+
+  const grid = document.createElement("div");
+  grid.className = "board-grid";
+
+  const addTile = document.createElement("button");
+  addTile.className = "board-tile board-tile-add";
+  addTile.innerHTML = `<div class="icon">+</div><div class="name">Nova pasta</div>`;
+  addTile.onclick = () => openBoardModal();
+  grid.appendChild(addTile);
+
+  state.boards.forEach(b => {
+    const tile = document.createElement("div");
+    tile.className = "board-tile";
+    tile.innerHTML = `
+      ${b.cover_url ? `<div class="board-tile-cover" style="background-image:url('${escapeHTML(b.cover_url)}')"></div>` : ""}
+      <span class="board-tile-privacy">${b.is_public ? "🌐 pública" : "🔒 privada"}</span>
+      <button class="icon-btn danger board-del" title="Excluir pasta" data-action="delete-board">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+      <div class="icon">${b.icon}</div>
+      <div class="name">${escapeHTML(b.name)}</div>
+      <div class="count">${b.item_count} imagem${b.item_count === 1 ? "" : "ns"}</div>
+    `;
+    tile.onclick = (e) => { if (e.target.closest('[data-action="delete-board"]')) return; openBoard(b); };
+    tile.querySelector('[data-action="delete-board"]').onclick = (e) => {
+      e.stopPropagation();
+      if (!confirm(`Excluir a pasta "${b.name}" e todo o seu conteúdo?`)) return;
+      (async () => {
+        const { error } = await deleteBoardRow(b);
+        if (error){ toast("Erro ao excluir pasta.", "error"); return; }
+        toast("Pasta excluída.");
+        state.boards = await fetchBoards(state.session.user.id);
+        renderMainOnly();
+      })();
+    };
+    grid.appendChild(tile);
+  });
+
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+async function openBoard(board){
+  state.activeBoard = board;
+  state.view = "board-detail";
+  state.boardItems = await fetchBoardItems(board.id);
+  render();
+}
+
+function renderBoardDetail(){
+  const wrap = document.createElement("div");
+  const b = state.activeBoard;
+  const isOwner = state.session && b.owner_id === state.session.user.id;
+
+  const header = document.createElement("div");
+  header.className = "board-detail-header";
+  header.innerHTML = `
+    <button class="icon-btn" id="boardBack" title="Voltar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="icon">${b.icon}</div>
+    <div class="titles">
+      <h2>${escapeHTML(b.name)}</h2>
+      <p>${state.boardItems.length} imagem${state.boardItems.length === 1 ? "" : "ns"} · ${b.is_public ? "pública — qualquer pessoa pode ver" : "privada — visível só para você"}</p>
+    </div>
+    ${isOwner ? `<button class="btn btn-sm" id="boardTogglePublic">${b.is_public ? "🔒 Tornar privada" : "🌐 Publicar pasta"}</button>` : ""}
+    ${isOwner ? `<button class="btn btn-primary btn-sm" id="boardAddItem">+ Adicionar</button>` : ""}
+  `;
+  header.querySelector("#boardBack").onclick = () => { state.view = "boards"; state.activeBoard = null; render(); };
+  header.querySelector("#boardAddItem")?.addEventListener("click", () => openUploadModal("board"));
+  header.querySelector("#boardTogglePublic")?.addEventListener("click", async () => {
+    const newValue = !b.is_public;
+    const confirmMsg = newValue
+      ? `Publicar a pasta "${b.name}"? Qualquer pessoa vai poder ver ela e o que tem dentro.`
+      : `Tornar a pasta "${b.name}" privada de novo? Só você vai poder vê-la.`;
+    if (!confirm(confirmMsg)) return;
+    const result = await setBoardPublic(b.id, newValue);
+    if (result.error){ toast("Erro ao atualizar privacidade.", "error"); return; }
+    b.is_public = newValue;
+    state.boards = await fetchBoards(state.session.user.id);
+    toast(newValue ? "Pasta publicada!" : "Pasta agora é privada.");
+    renderMainOnly();
+  });
+  wrap.appendChild(header);
+
+  if (state.boardItems.length === 0){
+    const empty = document.createElement("div");
+    empty.innerHTML = `<div class="empty-state">
+      <div class="glyph">◐</div>
+      <h3>Essa pasta está vazia</h3>
+      <p>Adicione imagens para guardar aqui — só você tem acesso.</p>
+    </div>`;
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "masonry";
+  state.boardItems.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const ratio = item.width && item.height ? `${item.width}/${item.height}` : "3/4";
+    card.innerHTML = `
+      <img src="${escapeHTML(item.url)}" alt="${escapeHTML(item.title)}" loading="lazy" style="aspect-ratio:${ratio}">
+      <div class="card-overlay">
+        <div class="card-title">${escapeHTML(item.title)}</div>
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn" title="Baixar" data-action="download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="icon-btn danger" title="Excluir" data-action="delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    `;
+    card.querySelector("img").onclick = () => openLightbox(item, true);
+    card.querySelector('[data-action="download"]').onclick = (e) => { e.stopPropagation(); downloadImage(item); };
+    card.querySelector('[data-action="delete"]').onclick = (e) => {
+      e.stopPropagation();
+      if (!confirm(`Excluir "${item.title}"? Essa ação não pode ser desfeita.`)) return;
+      (async () => {
+        const { error } = await deleteBoardItemRow(item);
+        if (error){ toast("Erro ao excluir.", "error"); return; }
+        toast("Excluído com sucesso.");
+        state.boardItems = await fetchBoardItems(b.id);
+        renderMainOnly();
+      })();
+    };
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* ============================================================
+   PAINEL ADMIN
+   ============================================================ */
+
+/* Modal genérico que pede um motivo obrigatório antes de confirmar
+   uma ação de moderação (banir, castigar, excluir conta). Sempre
+   deixa registrado o "porquê" — é isso que o usuário recebe na notificação
+   e o que aparece pra ele caso a conta fique bloqueada. */
+function openReasonModal({ title, sub, confirmLabel, danger, extraField, onConfirm }){
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <button class="modal-close" id="rmClose">✕</button>
+    <h2>${escapeHTML(title)}</h2>
+    <div class="modal-sub">${escapeHTML(sub)}</div>
+    <div id="rmAlert"></div>
+    ${extraField || ""}
+    <div class="field">
+      <label for="rmReason">Motivo (obrigatório)</label>
+      <textarea id="rmReason" class="reason-textarea" placeholder="Explique o motivo — a pessoa vai ver essa mensagem."></textarea>
+      <div class="field-hint">Esse texto é mostrado pro usuário, então seja claro sobre o que aconteceu.</div>
+    </div>
+    <button class="btn ${danger ? "btn-danger" : "btn-primary"} auth-submit" id="rmSubmit">${escapeHTML(confirmLabel)}</button>
+  `;
+  backdrop.appendChild(modal);
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  modal.querySelector("#rmClose").onclick = () => backdrop.remove();
+  document.body.appendChild(backdrop);
+
+  modal.querySelector("#rmSubmit").onclick = async () => {
+    const reason = modal.querySelector("#rmReason").value.trim();
+    const alertBox = modal.querySelector("#rmAlert");
+    if (!reason){
+      alertBox.innerHTML = `<div class="alert alert-error">Escreva o motivo antes de confirmar.</div>`;
+      return;
+    }
+    const submitBtn = modal.querySelector("#rmSubmit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Aplicando…";
+    const extraValue = modal.querySelector("#rmExtra")?.value;
+    const result = await onConfirm(reason, extraValue);
+    if (result?.error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(result.error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = confirmLabel;
+      return;
+    }
+    backdrop.remove();
+  };
+}
+
+function renderAdminView(){
+  const wrap = document.createElement("div");
+
+  const tabs = document.createElement("div");
+  tabs.className = "admin-tabs";
+  tabs.innerHTML = `
+    <button class="tab-btn ${state.adminTab === "users" ? "active" : ""}" id="adminTabUsers">Usuários</button>
+    <button class="tab-btn ${state.adminTab === "categories" ? "active" : ""}" id="adminTabCategories">Categorias</button>
+  `;
+  tabs.querySelector("#adminTabUsers").onclick = () => { state.adminTab = "users"; renderMainOnly(); };
+  tabs.querySelector("#adminTabCategories").onclick = () => { state.adminTab = "categories"; renderMainOnly(); };
+  wrap.appendChild(tabs);
+
+  if (state.adminTab === "users"){
+    wrap.appendChild(renderAdminUsersTab());
+  } else {
+    wrap.appendChild(renderAdminCategoriesTab());
+  }
+
+  return wrap;
+}
+
+function renderAdminUsersTab(){
+  const section = document.createElement("div");
+
+  const search = document.createElement("input");
+  search.type = "text";
+  search.className = "admin-search";
+  search.placeholder = "Buscar por nome de usuário…";
+  search.value = state.adminUserSearch;
+  search.oninput = debounce((e) => { state.adminUserSearch = e.target.value; renderMainOnly(); }, 150);
+  section.appendChild(search);
+
+  const list = document.createElement("div");
+  list.className = "admin-user-list";
+
+  const q = state.adminUserSearch.trim().toLowerCase();
+  const users = state.adminUsers.filter(u => !q || (u.username || "").toLowerCase().includes(q));
+
+  if (users.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="glyph">◐</div><h3>Nenhum usuário encontrado</h3></div>`;
+  }
+
+  users.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "admin-user-row";
+
+    const status = computeBlockStatus(u);
+    let statusHTML = `<span class="status-ok">ativo</span>`;
+    if (status?.type === "banned") statusHTML = `<span class="status-bad">banido — ${escapeHTML(status.reason || "sem motivo registrado")}</span>`;
+    else if (status?.type === "suspended") statusHTML = `<span class="status-bad">castigado até ${new Date(status.until).toLocaleString("pt-BR")} — ${escapeHTML(status.reason || "")}</span>`;
+    else if (status?.type === "deleted") statusHTML = `<span class="status-bad">conta excluída — ${escapeHTML(status.reason || "")}</span>`;
+
+    const isSelf = u.id === state.profile.id;
+    const isUserAdmin = u.role === "admin";
+
+    row.innerHTML = `
+      <div class="admin-user-info">
+        <div class="admin-user-name">${escapeHTML(u.username || "(sem nome)")} ${isUserAdmin ? `<span class="role-badge">admin</span>` : ""}</div>
+        <div class="admin-user-status">${statusHTML}</div>
+      </div>
+      <div class="admin-user-actions">
+        ${status?.type === "banned" ? `<button class="btn btn-sm" data-action="unban">Desbanir</button>` : `<button class="btn btn-danger btn-sm" data-action="ban" ${isSelf ? "disabled" : ""}>Banir</button>`}
+        ${status?.type === "suspended" ? `<button class="btn btn-sm" data-action="unsuspend">Remover castigo</button>` : `<button class="btn btn-sm" data-action="suspend" ${isSelf ? "disabled" : ""}>Castigar</button>`}
+        <button class="btn btn-danger btn-sm" data-action="delete-account" ${isSelf ? "disabled" : ""}>Excluir conta</button>
+        ${isUserAdmin
+          ? `<button class="btn btn-sm" data-action="demote" ${isSelf ? "disabled" : ""}>Remover admin</button>`
+          : `<button class="btn btn-sm" data-action="promote">Tornar admin</button>`}
+      </div>
+    `;
+
+    row.querySelector('[data-action="ban"]')?.addEventListener("click", () => {
+      openReasonModal({
+        title: `Banir ${u.username}`,
+        sub: "A conta perde acesso imediatamente e a pessoa vê esse motivo na tela de bloqueio.",
+        confirmLabel: "Banir conta",
+        danger: true,
+        onConfirm: async (reason) => {
+          const result = await banUser(u.id, reason);
+          if (!result.error){
+            toast("Usuário banido.");
+            state.adminUsers = await fetchAllProfilesForAdmin();
+            renderMainOnly();
+          }
+          return result;
+        }
+      });
+    });
+
+    row.querySelector('[data-action="unban"]')?.addEventListener("click", async () => {
+      const result = await unbanUser(u.id);
+      if (result.error){ toast("Erro ao desbanir.", "error"); return; }
+      toast("Usuário desbanido.");
+      state.adminUsers = await fetchAllProfilesForAdmin();
+      renderMainOnly();
+    });
+
+    row.querySelector('[data-action="suspend"]')?.addEventListener("click", () => {
+      openReasonModal({
+        title: `Castigar ${u.username}`,
+        sub: "A conta fica suspensa temporariamente. Escolha por quanto tempo e explique o motivo.",
+        confirmLabel: "Aplicar castigo",
+        danger: true,
+        extraField: `
+          <div class="field">
+            <label for="rmExtra">Duração</label>
+            <select id="rmExtra" class="select-field">
+              <option value="1">1 dia</option>
+              <option value="3">3 dias</option>
+              <option value="7" selected>7 dias</option>
+              <option value="30">30 dias</option>
+            </select>
+          </div>
+        `,
+        onConfirm: async (reason, days) => {
+          const until = new Date(Date.now() + Number(days) * 86400000).toISOString();
+          const result = await suspendUser(u.id, until, reason);
+          if (!result.error){
+            toast("Usuário castigado.");
+            state.adminUsers = await fetchAllProfilesForAdmin();
+            renderMainOnly();
+          }
+          return result;
+        }
+      });
+    });
+
+    row.querySelector('[data-action="unsuspend"]')?.addEventListener("click", async () => {
+      const result = await unsuspendUser(u.id);
+      if (result.error){ toast("Erro ao remover castigo.", "error"); return; }
+      toast("Castigo removido.");
+      state.adminUsers = await fetchAllProfilesForAdmin();
+      renderMainOnly();
+    });
+
+    row.querySelector('[data-action="delete-account"]')?.addEventListener("click", () => {
+      openReasonModal({
+        title: `Excluir conta de ${u.username}`,
+        sub: "A conta é marcada como excluída e a pessoa perde acesso. Essa ação fica registrada com o motivo.",
+        confirmLabel: "Excluir conta",
+        danger: true,
+        onConfirm: async (reason) => {
+          const result = await deleteUserAccount(u.id, reason);
+          if (!result.error){
+            toast("Conta excluída.");
+            state.adminUsers = await fetchAllProfilesForAdmin();
+            renderMainOnly();
+          }
+          return result;
+        }
+      });
+    });
+
+    row.querySelector('[data-action="promote"]')?.addEventListener("click", async () => {
+      if (!confirm(`Tornar ${u.username} admin? A pessoa vai ter acesso total ao painel.`)) return;
+      const result = await setUserRole(u.id, "admin");
+      if (result.error){ toast("Erro ao promover.", "error"); return; }
+      toast("Usuário promovido a admin.");
+      state.adminUsers = await fetchAllProfilesForAdmin();
+      renderMainOnly();
+    });
+
+    row.querySelector('[data-action="demote"]')?.addEventListener("click", async () => {
+      if (!confirm(`Remover privilégios de admin de ${u.username}?`)) return;
+      const result = await setUserRole(u.id, "user");
+      if (result.error){ toast("Erro ao remover admin.", "error"); return; }
+      toast("Privilégios de admin removidos.");
+      state.adminUsers = await fetchAllProfilesForAdmin();
+      renderMainOnly();
+    });
+
+    list.appendChild(row);
+  });
+
+  section.appendChild(list);
+  return section;
+}
+
+function renderAdminCategoriesTab(){
+  const section = document.createElement("div");
+
+  const addRow = document.createElement("div");
+  addRow.className = "admin-cat-row";
+  addRow.style.marginBottom = "18px";
+  addRow.innerHTML = `
+    <input type="text" id="newCatInput" placeholder="Nome da nova categoria" maxlength="30" style="flex:1; background:var(--ink-850); border:1px solid var(--line); color:var(--paper); padding:10px 12px; border-radius:var(--radius-sm); font-size:13.5px;">
+    <button class="btn btn-primary btn-sm" id="newCatSubmit">+ Criar categoria</button>
+  `;
+  addRow.querySelector("#newCatSubmit").onclick = async () => {
+    const input = addRow.querySelector("#newCatInput");
+    const label = input.value;
+    const result = await createCategory(label);
+    if (result.error){ toast(result.error, "error"); return; }
+    toast("Categoria criada.");
+    input.value = "";
+    state.categories = await fetchCategories();
+    renderMainOnly();
+  };
+  section.appendChild(addRow);
+
+  const note = document.createElement("p");
+  note.style.cssText = "color:var(--muted); font-size:12.5px; margin:-10px 0 18px;";
+  note.textContent = `"Todos" é fixo e sempre aparece primeiro no filtro — não precisa criar essa categoria.`;
+  section.appendChild(note);
+
+  const list = document.createElement("div");
+  list.className = "admin-cat-list";
+
+  state.categories.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "admin-cat-row";
+    row.innerHTML = `
+      <span>${escapeHTML(c.label)}</span>
+      <div class="admin-user-actions">
+        <button class="icon-btn" title="Renomear" data-action="rename">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" title="Excluir" data-action="delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+    `;
+    row.querySelector('[data-action="rename"]').onclick = async () => {
+      const novo = prompt("Novo nome da categoria:", c.label);
+      if (!novo || !novo.trim() || novo.trim() === c.label) return;
+      const result = await renameCategory(c.id, novo);
+      if (result.error){ toast(result.error, "error"); return; }
+      toast("Categoria renomeada.");
+      state.categories = await fetchCategories();
+      renderMainOnly();
+    };
+    row.querySelector('[data-action="delete"]').onclick = async () => {
+      if (!confirm(`Excluir a categoria "${c.label}"?`)) return;
+      const result = await deleteCategoryRow(c);
+      if (result.error){ toast(result.error, "error"); return; }
+      toast("Categoria excluída.");
+      state.categories = await fetchCategories();
+      renderMainOnly();
+    };
+    list.appendChild(row);
+  });
+
+  if (state.categories.length === 0){
+    list.innerHTML = `<div class="empty-state"><div class="glyph">◐</div><h3>Nenhuma categoria ainda</h3><p>Crie a primeira categoria acima.</p></div>`;
+  }
+
+  section.appendChild(list);
+  return section;
+}
+
+/* ============================================================
+   NOTIFICAÇÕES
+   ============================================================ */
+function openNotificationsModal(){
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  const items = state.notifications;
+  modal.innerHTML = `
+    <button class="modal-close" id="notifClose">✕</button>
+    <h2>Notificações</h2>
+    <div class="modal-sub">Avisos sobre a sua conta e atividade.</div>
+    <div id="notifList" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto;">
+      ${items.length === 0
+        ? `<div class="empty-state"><div class="glyph">◐</div><h3>Sem notificações</h3></div>`
+        : items.map(n => `
+          <div class="admin-user-row" style="${n.read ? "opacity:0.6;" : ""}">
+            <div class="admin-user-info">
+              <div class="admin-user-status" style="font-size:13.5px; color:var(--paper);">${escapeHTML(n.message)}</div>
+              <div class="admin-user-status" style="margin-top:4px;">${timeAgo(n.created_at)}</div>
+            </div>
+          </div>
+        `).join("")}
+    </div>
+  `;
+  backdrop.appendChild(modal);
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  modal.querySelector("#notifClose").onclick = () => backdrop.remove();
+  document.body.appendChild(backdrop);
+
+  if (items.some(n => !n.read)){
+    markNotificationsRead().then(() => {
+      state.notifications = state.notifications.map(n => ({ ...n, read: true }));
+    });
+  }
+}
+
+function openBoardModal(){
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  let chosenIcon = BOARD_ICONS[0];
+  let isPublic = false;
+  let coverFile = null;
+  modal.innerHTML = `
+    <button class="modal-close" id="bmClose">✕</button>
+    <h2>Nova pasta</h2>
+    <div class="modal-sub">Crie uma pasta para organizar seus wallpapers, como no Pinterest.</div>
+    <div id="bmAlert"></div>
+    <div class="field">
+      <label for="bmName">Nome da pasta</label>
+      <input type="text" id="bmName" maxlength="40" placeholder="Ex: Inspirações para o quarto">
+    </div>
+    <div class="field">
+      <label>Ícone</label>
+      <div class="icon-picker" id="bmIcons">
+        ${BOARD_ICONS.map((ic, i) => `<button type="button" data-icon="${ic}" class="${i === 0 ? "active" : ""}">${ic}</button>`).join("")}
+      </div>
+    </div>
+    <div class="field">
+      <label>Capa (opcional)</label>
+      <label class="dropzone" id="bmDropzone" style="padding:18px;">
+        <strong>Clique para escolher uma imagem de capa</strong>
+        JPG, PNG, WEBP ou AVIF
+        <input type="file" id="bmCoverInput" accept="image/jpeg,image/png,image/webp,image/avif">
+      </label>
+      <img class="preview-thumb hidden" id="bmCoverPreview" style="max-height:140px;">
+    </div>
+    <div class="field">
+      <label>Privacidade</label>
+      <div class="privacy-toggle" id="bmPrivacy">
+        <button type="button" class="privacy-opt active" data-priv="private">🔒 Privada</button>
+        <button type="button" class="privacy-opt" data-priv="public">🌐 Pública</button>
+      </div>
+      <div class="field-hint" id="bmPrivHint">Só você vê essa pasta. Dá pra publicar depois, quando quiser.</div>
+    </div>
+    <button class="btn btn-primary auth-submit" id="bmSubmit">Criar pasta</button>
+  `;
+  backdrop.appendChild(modal);
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  modal.querySelector("#bmClose").onclick = () => backdrop.remove();
+  document.body.appendChild(backdrop);
+
+  modal.querySelectorAll("#bmIcons button").forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll("#bmIcons button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      chosenIcon = btn.dataset.icon;
+    };
+  });
+
+  const privHint = modal.querySelector("#bmPrivHint");
+  modal.querySelectorAll("#bmPrivacy .privacy-opt").forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll("#bmPrivacy .privacy-opt").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      isPublic = btn.dataset.priv === "public";
+      privHint.textContent = isPublic
+        ? "Qualquer pessoa vai poder ver essa pasta e o que tem dentro."
+        : "Só você vê essa pasta. Dá pra publicar depois, quando quiser.";
+    };
+  });
+
+  const coverInput = modal.querySelector("#bmCoverInput");
+  const coverPreview = modal.querySelector("#bmCoverPreview");
+  coverInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err){ modal.querySelector("#bmAlert").innerHTML = `<div class="alert alert-error">${escapeHTML(err)}</div>`; return; }
+    modal.querySelector("#bmAlert").innerHTML = "";
+    coverFile = file;
+    coverPreview.src = URL.createObjectURL(file);
+    coverPreview.classList.remove("hidden");
+  };
+
+  modal.querySelector("#bmSubmit").onclick = async () => {
+    const name = modal.querySelector("#bmName").value;
+    const alertBox = modal.querySelector("#bmAlert");
+    const submitBtn = modal.querySelector("#bmSubmit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Criando…";
+    const { data, error } = await createBoard(name, chosenIcon, isPublic);
+    if (error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Criar pasta";
+      return;
+    }
+    if (coverFile){
+      const coverResult = await uploadBoardCover(data.id, coverFile);
+      if (coverResult.error) toast("Pasta criada, mas a capa não pôde ser enviada.", "error");
+    }
+    toast("Pasta criada!");
+    backdrop.remove();
+    state.boards = await fetchBoards(state.session.user.id);
+    renderMainOnly();
+  };
+}
+
+/* ============================================================
+   PERFIL
+   ============================================================ */
+async function openProfile(userId){
+  const [profile, posts, publicBoards] = await Promise.all([fetchProfileById(userId), fetchUserPosts(userId), fetchPublicBoardsForProfile(userId)]);
+  if (!profile) return;
+  state.profileView = { profile, posts, publicBoards };
+  state.view = "profile";
+  render();
+}
+
+function renderProfileView(){
+  const wrap = document.createElement("div");
+  const { profile, posts } = state.profileView;
+  const isOwn = state.session.user.id === profile.id;
+  const isAdmin = profile.role === "admin";
+  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) : "";
+
+  const headerCard = document.createElement("div");
+  headerCard.className = "profile-header";
+  headerCard.innerHTML = `
+    <div class="profile-avatar-lg">${escapeHTML(initialsOf(profile.username))}</div>
+    <div class="profile-info">
+      <h2>${escapeHTML(profile.username)} ${isAdmin ? `<span class="role-badge">admin</span>` : ""}</h2>
+      <div class="profile-meta">${posts.length} post${posts.length === 1 ? "" : "s"} ${joined ? `· membro desde ${joined}` : ""}</div>
+      <div id="bioArea"></div>
+    </div>
+  `;
+  wrap.appendChild(headerCard);
+
+  const bioArea = headerCard.querySelector("#bioArea");
+  function renderBioReadOnly(){
+    bioArea.innerHTML = `
+      <p class="profile-bio">${profile.bio ? escapeHTML(profile.bio) : (isOwn ? "Você ainda não escreveu uma bio." : "Sem bio ainda.")}</p>
+      ${isOwn ? `<div class="profile-actions"><button class="btn btn-sm" id="bioEditBtn">Editar bio</button></div>` : ""}
+    `;
+    const editBtn = bioArea.querySelector("#bioEditBtn");
+    if (editBtn) editBtn.onclick = renderBioEdit;
+  }
+  function renderBioEdit(){
+    bioArea.innerHTML = `
+      <div class="profile-bio-edit">
+        <textarea id="bioInput" maxlength="240" placeholder="Conte um pouco sobre você…">${escapeHTML(profile.bio || "")}</textarea>
+        <div class="profile-actions">
+          <button class="btn btn-primary btn-sm" id="bioSave">Salvar</button>
+          <button class="btn btn-ghost btn-sm" id="bioCancel">Cancelar</button>
+        </div>
+      </div>
+    `;
+    bioArea.querySelector("#bioCancel").onclick = renderBioReadOnly;
+    bioArea.querySelector("#bioSave").onclick = async () => {
+      const bio = bioArea.querySelector("#bioInput").value.trim();
+      const result = await updateOwnProfile({ bio });
+      if (result.error){ toast("Erro ao salvar bio.", "error"); return; }
+      profile.bio = bio;
+      toast("Bio atualizada!");
+      renderBioReadOnly();
+    };
+  }
+  renderBioReadOnly();
+
+  const sectionTitle = document.createElement("div");
+  sectionTitle.className = "profile-section-title";
+  sectionTitle.textContent = isOwn ? "Seus posts na galeria" : `Posts de ${profile.username}`;
+  wrap.appendChild(sectionTitle);
+
+  if (posts.length === 0){
+    const empty = document.createElement("div");
+    empty.innerHTML = `<div class="empty-state">
+      <div class="glyph">◐</div>
+      <h3>Nenhum post ainda</h3>
+      <p>${isOwn ? "Publique seu primeiro wallpaper na galeria." : "Esse usuário ainda não postou nada."}</p>
+    </div>`;
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "masonry";
+  posts.forEach(w => grid.appendChild(buildWallpaperCard(w)));
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+/* ============================================================
+   DOWNLOAD / DELETE actions
+   ============================================================ */
+async function downloadImage(w){
+  try{
+    const res = await fetch(w.url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = sanitizeFilename(w.title || "wallpaper") + "." + (w.storage_path.split(".").pop());
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(e){
+    toast("Não foi possível baixar a imagem.", "error");
+  }
+}
+
+function confirmDelete(w, isBoardItem){
+  if (!confirm(`Excluir "${w.title}"? Essa ação não pode ser desfeita.`)) return;
+  (async () => {
+    const { error } = isBoardItem ? await deleteBoardItemRow(w) : await deletePublicWallpaper(w);
+    if (error){ toast("Erro ao excluir.", "error"); return; }
+    toast("Excluído com sucesso.");
+    await refreshCurrentView();
+  })();
+}
+
+/* ============================================================
+   LIGHTBOX
+   ============================================================ */
+function openLightbox(w, isBoardItem){
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+
+  const isOwner = state.session && w.created_by === state.session.user.id;
+  const canDelete = isBoardItem || isOwner || state.profile?.role === "admin";
+  const liked = !isBoardItem && state.myLikes.has(w.id);
+  const likeCount = !isBoardItem ? (state.likeCounts[w.id] || 0) : 0;
+
+  backdrop.innerHTML = `
+    <div class="lightbox">
+      <img src="${escapeHTML(w.url)}" alt="${escapeHTML(w.title)}">
+      <div class="lightbox-info">
+        <button class="modal-close" id="lbClose">✕</button>
+        <h2>${escapeHTML(w.title)}</h2>
+        <p>${escapeHTML(w.description || (isBoardItem ? "Item da sua pasta privada." : ""))}</p>
+        ${!isBoardItem ? `
+        <div class="lightbox-likes">
+          <button class="like-btn ${liked ? "liked" : ""}" id="lbLike">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            <span id="lbLikeCount">${likeCount}</span> curtida${likeCount === 1 ? "" : "s"}
+          </button>
+        </div>` : ""}
+        <div class="lightbox-actions">
+          <button class="btn btn-primary" id="lbDownload">Baixar</button>
+          ${canDelete ? `<button class="btn btn-danger" id="lbDelete">Excluir</button>` : ""}
+        </div>
+        ${!isBoardItem ? `
+        <div class="comments-section">
+          <div class="comments-list" id="lbComments"><div class="comment-empty">Carregando comentários…</div></div>
+          <form class="comment-form" id="lbCommentForm">
+            <textarea id="lbCommentInput" maxlength="500" placeholder="Escreva um comentário…" required></textarea>
+            <button type="submit" class="btn btn-primary btn-sm">Enviar</button>
+          </form>
+        </div>` : ""}
+      </div>
+    </div>
+  `;
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.querySelector("#lbClose").onclick = () => backdrop.remove();
+  backdrop.querySelector("#lbDownload").onclick = () => downloadImage(w);
+  const delBtn = backdrop.querySelector("#lbDelete");
+  if (delBtn) delBtn.onclick = () => { backdrop.remove(); confirmDelete(w, isBoardItem); };
+
+  const likeBtn = backdrop.querySelector("#lbLike");
+  if (likeBtn){
+    likeBtn.onclick = async () => {
+      await toggleLike(w.id);
+      likeBtn.classList.toggle("liked", state.myLikes.has(w.id));
+      const count = state.likeCounts[w.id] || 0;
+      likeBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        ${count} curtida${count === 1 ? "" : "s"}`;
+    };
+  }
+
+  const commentsList = backdrop.querySelector("#lbComments");
+  if (commentsList){
+    (async () => {
+      const comments = await fetchComments(w.id);
+      renderCommentsList(commentsList, comments, w);
+    })();
+    backdrop.querySelector("#lbCommentForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const input = backdrop.querySelector("#lbCommentInput");
+      const content = input.value.trim();
+      if (!content) return;
+      const result = await addComment(w.id, content);
+      if (result.error){ toast("Erro ao comentar.", "error"); return; }
+      input.value = "";
+      w.comment_count = (w.comment_count || 0) + 1;
+      const comments = await fetchComments(w.id);
+      renderCommentsList(commentsList, comments, w);
+    };
+  }
+
+  document.body.appendChild(backdrop);
+}
+
+function renderCommentsList(container, comments, w){
+  if (comments.length === 0){
+    container.innerHTML = `<div class="comment-empty">Nenhum comentário ainda. Seja o primeiro!</div>`;
+    return;
+  }
+  container.innerHTML = "";
+  comments.forEach(c => {
+    const canDeleteComment = state.session && (c.user_id === state.session.user.id || state.profile?.role === "admin");
+    const item = document.createElement("div");
+    item.className = "comment-item";
+    item.innerHTML = `
+      <div class="c-head">
+        <span class="c-author">${escapeHTML(c.author?.username || "—")}</span>
+        <span class="c-time">${timeAgo(c.created_at)}</span>
+        ${canDeleteComment ? `<button class="c-del" data-id="${c.id}">excluir</button>` : ""}
+      </div>
+      <div class="c-body">${escapeHTML(c.content)}</div>
+    `;
+    const del = item.querySelector(".c-del");
+    if (del) del.onclick = async () => {
+      const { error } = await deleteCommentRow(c.id);
+      if (error){ toast("Erro ao excluir comentário.", "error"); return; }
+      w.comment_count = Math.max(0, (w.comment_count || 1) - 1);
+      const updated = await fetchComments(w.id);
+      renderCommentsList(container, updated, w);
+    };
+    container.appendChild(item);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+/* ============================================================
+   UPLOAD MODAL
+   ============================================================ */
+function openUploadModal(target){
+  // target: "public" (qualquer usuário logado) | "board" (item de uma pasta privada)
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <button class="modal-close" id="upClose">✕</button>
+    <h2>${target === "public" ? "Postar na galeria" : "Adicionar à pasta"}</h2>
+    <div class="modal-sub">${target === "public" ? "Visível para todos os usuários." : "Visível apenas para você."}</div>
+    <div id="upAlert"></div>
+    <label class="dropzone" id="dropzone">
+      <strong>Clique ou arraste uma imagem</strong>
+      JPG, PNG, WEBP ou AVIF — até ${MAX_FILE_MB}MB
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/avif">
+    </label>
+    <img class="preview-thumb hidden" id="previewThumb">
+    <div class="field">
+      <label for="upTitle">Título</label>
+      <input type="text" id="upTitle" maxlength="80" placeholder="Ex: Montanhas ao amanhecer">
+    </div>
+    ${target === "public" ? `
+    <div class="field">
+      <label for="upDesc">Descrição (opcional)</label>
+      <input type="text" id="upDesc" maxlength="200" placeholder="Conte algo sobre essa imagem">
+    </div>
+    <div class="field">
+      <label for="upCat">Categoria</label>
+      <select id="upCat" class="select-field">
+        ${state.categories.map(c => `<option value="${c.slug}">${escapeHTML(c.label)}</option>`).join("")}
+      </select>
+    </div>` : ""}
+    <button class="btn btn-primary auth-submit" id="upSubmit">Enviar</button>
+  `;
+  backdrop.appendChild(modal);
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  modal.querySelector("#upClose").onclick = () => backdrop.remove();
+  document.body.appendChild(backdrop);
+
+  let selectedFile = null;
+  const dropzone = modal.querySelector("#dropzone");
+  const fileInput = modal.querySelector("#fileInput");
+  const previewThumb = modal.querySelector("#previewThumb");
+  const alertBox = modal.querySelector("#upAlert");
+
+  function handleFile(file){
+    const err = validateImageFile(file);
+    if (err){ alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(err)}</div>`; return; }
+    alertBox.innerHTML = "";
+    selectedFile = file;
+    previewThumb.src = URL.createObjectURL(file);
+    previewThumb.classList.remove("hidden");
+  }
+
+  fileInput.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+  dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add("drag"); };
+  dropzone.ondragleave = () => dropzone.classList.remove("drag");
+  dropzone.ondrop = (e) => {
+    e.preventDefault(); dropzone.classList.remove("drag");
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  };
+
+  modal.querySelector("#upSubmit").onclick = async () => {
+    const title = modal.querySelector("#upTitle").value.trim();
+    if (!selectedFile){ alertBox.innerHTML = `<div class="alert alert-error">Selecione uma imagem.</div>`; return; }
+    if (!title){ alertBox.innerHTML = `<div class="alert alert-error">Dê um título à imagem.</div>`; return; }
+
+    const submitBtn = modal.querySelector("#upSubmit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Enviando…";
+
+    let result;
+    if (target === "public"){
+      const description = modal.querySelector("#upDesc").value.trim();
+      const category = modal.querySelector("#upCat").value;
+      result = await uploadPublicWallpaper({ file: selectedFile, title, description, category });
+    } else {
+      result = await uploadBoardItem({ boardId: state.activeBoard.id, file: selectedFile, title });
+    }
+
+    if (result.error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(result.error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Enviar";
+      return;
+    }
+
+    toast("Wallpaper enviado!");
+    backdrop.remove();
+    await refreshCurrentView();
+  };
+}
+
+/* ============================================================
+   TELA DE BLOQUEIO (banido / castigado / conta excluída)
+   ============================================================ */
+function renderBlockedGate(){
+  const shell = document.createElement("div");
+  shell.className = "auth-shell";
+  const card = document.createElement("div");
+  card.className = "auth-card";
+  const b = state.blocked;
+  const titles = { banned: "Conta banida", suspended: "Conta castigada", deleted: "Conta encerrada" };
+  const untilStr = b.until ? ` até ${new Date(b.until).toLocaleString("pt-BR")}` : "";
+
+  card.innerHTML = `
+    <div class="brand" style="justify-content:center;">
+      <svg class="logo-mark" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#0a0a0f"/>
+        <circle cx="16" cy="16" r="5" fill="#e3a458"/>
+        <g stroke="#e3a458" stroke-width="2" stroke-linecap="round">
+          <line x1="16" y1="4" x2="16" y2="8"/><line x1="16" y1="24" x2="16" y2="28"/>
+          <line x1="4" y1="16" x2="8" y2="16"/><line x1="24" y1="16" x2="28" y2="16"/>
+          <line x1="7.5" y1="7.5" x2="10.3" y2="10.3"/><line x1="21.7" y1="21.7" x2="24.5" y2="24.5"/>
+          <line x1="24.5" y1="7.5" x2="21.7" y2="10.3"/><line x1="10.3" y1="21.7" x2="7.5" y2="24.5"/>
+        </g>
+      </svg>
+      <div>Lumen</div>
+    </div>
+    <div class="auth-sub" style="color:var(--danger);font-weight:700;">${titles[b.type]}${untilStr}</div>
+    <div class="alert alert-error" style="margin-top:4px;">${escapeHTML(b.reason || "Nenhum motivo foi registrado pelo admin.")}</div>
+    <button class="btn btn-ghost auth-submit" id="blockedLogout" style="margin-top:14px;">Sair</button>
+  `;
+  shell.appendChild(card);
+  card.querySelector("#blockedLogout").onclick = async () => { await signOut(); };
+  return shell;
+}
+
+/* ============================================================
+   AUTH GATE (tela de login / cadastro)
+   ============================================================ */
+function renderAuthGate(){
+  const shell = document.createElement("div");
+  shell.className = "auth-shell";
+
+  const card = document.createElement("div");
+  card.className = "auth-card";
+
+  const isLogin = state.authMode === "login";
+
+  card.innerHTML = `
+    <div class="brand" style="justify-content:center;">
+      <svg class="logo-mark" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#0a0a0f"/>
+        <circle cx="16" cy="16" r="5" fill="#e3a458"/>
+        <g stroke="#e3a458" stroke-width="2" stroke-linecap="round">
+          <line x1="16" y1="4" x2="16" y2="8"/><line x1="16" y1="24" x2="16" y2="28"/>
+          <line x1="4" y1="16" x2="8" y2="16"/><line x1="24" y1="16" x2="28" y2="16"/>
+          <line x1="7.5" y1="7.5" x2="10.3" y2="10.3"/><line x1="21.7" y1="21.7" x2="24.5" y2="24.5"/>
+          <line x1="24.5" y1="7.5" x2="21.7" y2="10.3"/><line x1="10.3" y1="21.7" x2="7.5" y2="24.5"/>
+        </g>
+      </svg>
+      <div>Lumen</div>
+    </div>
+    <div class="auth-sub">${isLogin ? "Entre para ver a galeria completa." : "Crie sua conta para começar."}</div>
+    <div id="authAlert"></div>
+    <form id="authForm">
+      ${!isLogin ? `
+      <div class="field">
+        <label for="username">Nome de usuário</label>
+        <input type="text" id="username" autocomplete="username" placeholder="seu_usuario" required>
+        <div class="field-hint">3–20 caracteres, letras, números e underscore.</div>
+      </div>` : ""}
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" autocomplete="email" placeholder="voce@email.com" required>
+      </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" autocomplete="${isLogin ? "current-password" : "new-password"}" placeholder="••••••••" required minlength="6">
+        ${!isLogin ? `
+        <div class="strength-meter">
+          <div class="strength-bar" id="bar1"></div>
+          <div class="strength-bar" id="bar2"></div>
+          <div class="strength-bar" id="bar3"></div>
+        </div>
+        <div class="field-hint" id="strengthLabel">Mínimo de 8 caracteres, misture letras, números e símbolos.</div>` : ""}
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">${isLogin ? "Entrar" : "Criar conta"}</button>
+    </form>
+    <div class="auth-switch">
+      ${isLogin ? "Ainda não tem conta?" : "Já tem conta?"}
+      <button id="switchMode">${isLogin ? "Cadastre-se" : "Entrar"}</button>
+    </div>
+  `;
+
+  shell.appendChild(card);
+
+  card.querySelector("#switchMode").onclick = () => {
+    state.authMode = isLogin ? "signup" : "login";
+    render();
+  };
+
+  if (!isLogin){
+    const pwInput = card.querySelector("#password");
+    pwInput.oninput = () => {
+      const s = passwordStrength(pwInput.value);
+      const bars = [card.querySelector("#bar1"), card.querySelector("#bar2"), card.querySelector("#bar3")];
+      bars.forEach(b => b.className = "strength-bar");
+      const label = card.querySelector("#strengthLabel");
+      if (pwInput.value.length === 0){ label.textContent = "Mínimo de 8 caracteres, misture letras, números e símbolos."; return; }
+      if (s === "weak"){ bars[0].classList.add("on-weak"); label.textContent = "Senha fraca."; }
+      if (s === "mid"){ bars[0].classList.add("on-mid"); bars[1].classList.add("on-mid"); label.textContent = "Senha razoável."; }
+      if (s === "strong"){ bars.forEach(b => b.classList.add("on-strong")); label.textContent = "Senha forte."; }
+    };
+  }
+
+  card.querySelector("#authForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const alertBox = card.querySelector("#authAlert");
+    const submitBtn = card.querySelector("#authSubmit");
+    alertBox.innerHTML = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Aguarde…";
+
+    const email = card.querySelector("#email").value.trim();
+    const password = card.querySelector("#password").value;
+
+    let result;
+    if (isLogin){
+      result = await signIn(email, password);
+    } else {
+      const username = card.querySelector("#username").value.trim();
+      result = await signUp(email, password, username);
+    }
+
+    if (result.error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(result.error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = isLogin ? "Entrar" : "Criar conta";
+      return;
+    }
+
+    if (!isLogin){
+      // Se a confirmação por e-mail estiver ativa no projeto, não haverá sessão ainda
+      if (!result.data.session){
+        alertBox.innerHTML = `<div class="alert alert-ok">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Criar conta";
+        return;
+      }
+    }
+    // onAuthStateChange cuida do resto
+  };
+
+  return shell;
+}
+
+/* ============================================================
+   REFRESH / BOOTSTRAP
+   ============================================================ */
+async function refreshCurrentView(){
+  if (!state.session) return;
+  if (state.view === "feed"){
+    state.wallpapers = await fetchPublicWallpapers();
+  } else if (state.view === "boards"){
+    state.boards = await fetchBoards(state.session.user.id);
+  } else if (state.view === "board-detail" && state.activeBoard){
+    state.boardItems = await fetchBoardItems(state.activeBoard.id);
+    state.boards = await fetchBoards(state.session.user.id);
+  } else if (state.view === "profile" && state.profileView){
+    const userId = state.profileView.profile.id;
+    const [profile, posts, publicBoards] = await Promise.all([fetchProfileById(userId), fetchUserPosts(userId), fetchPublicBoardsForProfile(userId)]);
+    if (profile) state.profileView = { profile, posts, publicBoards };
+  }
+  renderMainOnly();
+}
+
+function withTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Tempo esgotado ao ${label} (sem resposta do servidor).`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function bootstrap(){
+  try {
+    console.log("[DIAG] bootstrap iniciado, chamando getSession()...");
+    const { data: { session }, error: sessionError } = await withTimeout(sb.auth.getSession(), 15000, "verificar sessão");
+    console.log("[DIAG] getSession() retornou:", session, sessionError);
+    if (sessionError) throw sessionError;
+    state.session = session;
+
+    if (session){
+      // Cada chamada é isolada: se uma falhar, as outras ainda completam
+      // e o app renderiza com o que conseguiu carregar, em vez de travar.
+      state.profile = await loadProfile(session.user.id).catch(err => {
+        console.error("Erro ao carregar perfil:", err);
+        return null;
+      });
+      state.blocked = computeBlockStatus(state.profile);
+      state.categories = await fetchCategories().catch(err => {
+        console.error("Erro ao carregar categorias:", err);
+        return [];
+      });
+      if (!state.blocked){
+        state.wallpapers = await fetchPublicWallpapers().catch(err => {
+          console.error("Erro ao carregar wallpapers:", err);
+          return [];
+        });
+        state.notifications = await fetchMyNotifications().catch(err => {
+          console.error("Erro ao carregar notificações:", err);
+          return [];
+        });
+      }
+    }
+    render();
+  } catch (err){
+    console.error("Erro fatal ao iniciar:", err);
+    const app = document.getElementById("app");
+    app.innerHTML = `
+      <div class="page-loader" style="flex-direction:column; gap:14px; text-align:center; padding:20px;">
+        <div style="color:var(--danger); font-size:15px; font-weight:600;">Não foi possível carregar o Lumen.</div>
+        <div style="color:var(--muted); font-size:13px; max-width:420px;">${escapeHTML(err.message || String(err))}</div>
+        <button class="btn btn-primary btn-sm" onclick="location.reload()">Tentar de novo</button>
+      </div>
+    `;
+  }
+}
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  try {
+    state.session = session;
+    if (session){
+      if (!state.profile || state.profile.id !== session.user.id){
+        state.profile = await loadProfile(session.user.id).catch(err => {
+          console.error("Erro ao carregar perfil:", err);
+          return null;
+        });
+      }
+      state.blocked = computeBlockStatus(state.profile);
+      state.categories = await fetchCategories().catch(err => {
+        console.error("Erro ao carregar categorias:", err);
+        return [];
+      });
+      if (!state.blocked){
+        state.view = "feed";
+        state.wallpapers = await fetchPublicWallpapers().catch(err => {
+          console.error("Erro ao carregar wallpapers:", err);
+          return [];
+        });
+        state.notifications = await fetchMyNotifications().catch(err => {
+          console.error("Erro ao carregar notificações:", err);
+          return [];
+        });
+      }
+    } else {
+      state.profile = null;
+      state.wallpapers = [];
+      state.boards = [];
+      state.activeBoard = null;
+      state.boardItems = [];
+      state.profileView = null;
+      state.authMode = "login";
+      state.blocked = null;
+      state.notifications = [];
+    }
+    render();
+  } catch (err){
+    console.error("Erro ao processar mudança de sessão:", err);
+    toast("Algo deu errado ao atualizar sua sessão. Recarregue a página.", "error");
+  }
+});
+
+bootstrap();
+</script>
+</body>
+</html>
