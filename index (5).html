@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumen — Wallpapers</title>
+<meta name="description" content="Galeria de wallpapers em alta resolução.">
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+/* ============================================================
+   TOKENS — Lumen design system
+   Conceito: uma sala escura de exposição onde cada wallpaper é
+   a única fonte de luz. Preto azulado profundo, acento âmbar
+   quente (a "luz"), serifa editorial para títulos, sans neutra
+   para interface.
+   ============================================================ */
+:root{
+  --ink-950: #0a0a0f;
+  --ink-900: #0f0f17;
+  --ink-850: #15151f;
+  --ink-800: #1b1b27;
+  --ink-700: #26262f;
+  --ink-600: #38384a;
+  --line: #2a2a38;
+  --paper: #ece6da;
+  --paper-dim: #b7b2a8;
+  --muted: #8a8a9a;
+  --amber: #e3a458;
+  --amber-bright: #f4c07a;
+  --amber-dim: #6b5230;
+  --danger: #d9685f;
+  --ok: #7fb88f;
+
+  --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-lift: 0 20px 50px -20px rgba(0,0,0,0.6);
+}
+
+@font-face{
+  font-family: "Fraunces";
+  src: local("Georgia");
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin: 0;
+  background: var(--ink-950);
+  background-image:
+    radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(227,164,88,0.08), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 100% 100%, rgba(227,164,88,0.04), transparent 60%);
+  background-attachment: fixed;
+  color: var(--paper);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+::selection{ background: var(--amber-dim); color: var(--paper); }
+
+a{ color: inherit; text-decoration: none; }
+button{ font-family: inherit; cursor: pointer; }
+
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-track{ background: var(--ink-950); }
+::-webkit-scrollbar-thumb{ background: var(--ink-700); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--ink-600); }
+
+/* Focus visível para acessibilidade */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.app{ min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ---------- HEADER ---------- */
+header.topbar{
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 20px;
+  padding: 14px 28px;
+  background: rgba(10,10,15,0.82);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+}
+.brand{
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--serif);
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.brand .dot{
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 12px 2px rgba(227,164,88,0.7);
+}
+.brand small{
+  display: block; font-family: var(--sans); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--muted); text-transform: uppercase; font-weight: 600; margin-top: -2px;
+}
+
+.search-wrap{
+  flex: 1; max-width: 480px;
+  position: relative;
+}
+.search-wrap input{
+  width: 100%;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  padding: 10px 14px 10px 38px;
+  border-radius: 999px;
+  font-size: 14px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.search-wrap input:focus{ border-color: var(--amber-dim); background: var(--ink-800); outline: none; }
+.search-wrap input:focus-visible{ outline: 2px solid var(--amber); outline-offset: 2px; }
+.search-wrap svg{
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; stroke: var(--muted);
+}
+
+.nav-actions{ display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+.tab-btn{
+  background: transparent; border: 1px solid transparent; color: var(--paper-dim);
+  font-size: 13.5px; font-weight: 600; padding: 9px 14px; border-radius: 999px;
+  transition: all .15s ease;
+}
+.tab-btn:hover{ color: var(--paper); background: var(--ink-850); }
+.tab-btn.active{ color: var(--ink-950); background: var(--amber); }
+
+.btn{
+  border: 1px solid var(--line);
+  background: var(--ink-850);
+  color: var(--paper);
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all .15s ease;
+}
+.btn:hover{ background: var(--ink-800); border-color: var(--ink-600); }
+.btn-primary{
+  background: var(--amber); color: var(--ink-950); border-color: var(--amber);
+}
+.btn-primary:hover{ background: var(--amber-bright); border-color: var(--amber-bright); }
+.btn-ghost{ background: transparent; border-color: transparent; color: var(--muted); }
+.btn-ghost:hover{ color: var(--paper); background: var(--ink-850); }
+.btn-danger{ background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover{ background: rgba(217,104,95,0.12); }
+.btn:disabled{ opacity: 0.5; cursor: not-allowed; }
+.btn-sm{ padding: 6px 12px; font-size: 12.5px; }
+
+.avatar-chip{
+  display: flex; align-items: center; gap: 8px;
+  background: var(--ink-850); border: 1px solid var(--line);
+  padding: 6px 12px 6px 6px; border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+}
+.avatar-circle{
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--amber), var(--amber-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: var(--ink-950);
+  text-transform: uppercase;
+}
+.role-badge{
+  font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--amber-dim); color: var(--amber-bright);
+  padding: 2px 7px; border-radius: 999px; font-weight: 700;
+}
+
+/* ---------- MAIN ---------- */
+main{ flex: 1; padding: 28px; max-width: 1500px; margin: 0 auto; width: 100%; }
+
+.category-rail{
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 20px;
+  scrollbar-width: none;
+}
+.category-rail::-webkit-scrollbar{ display: none; }
+.chip{
+  flex-shrink: 0;
+  background: var(--ink-850); border: 1px solid var(--line); color: var(--paper-dim);
+  padding: 7px 15px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  transition: all .15s ease;
+}
+.chip:hover{ border-color: var(--amber-dim); color: var(--paper); }
+.chip.active{ background: var(--amber); color: var(--ink-950); border-color: var(--amber); }
+
+/* Masonry grid via CSS columns — leve e responsivo */
+.masonry{
+  column-count: 5;
+  column-gap: 16px;
+}
+@media (max-width: 1400px){ .masonry{ column-count: 4; } }
+@media (max-width: 1100px){ .masonry{ column-count: 3; } }
+@media (max-width: 760px){ .masonry{ column-count: 2; column-gap: 10px; } main{ padding: 16px; } }
+@media (max-width: 480px){ .masonry{ column-count: 1; } }
+
+.card{
+  break-inside: avoid;
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.card:hover{ transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+.card img{ display: block; width: 100%; height: auto; }
+.card .skeleton{
+  width: 100%; aspect-ratio: 3/4;
+  background: linear-gradient(110deg, var(--ink-850) 8%, var(--ink-800) 18%, var(--ink-850) 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer{ to{ background-position-x: -200%; } }
+
+.card-overlay{
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.15) 45%, transparent 70%);
+  opacity: 0; transition: opacity .2s ease;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 14px;
+}
+.card:hover .card-overlay{ opacity: 1; }
+.card-title{ font-family: var(--serif); font-size: 16px; line-height: 1.25; margin: 0 0 4px; }
+.card-meta{ font-size: 11.5px; color: var(--paper-dim); display: flex; align-items: center; gap: 6px; }
+.card-actions{
+  position: absolute; top: 10px; right: 10px; display: flex; gap: 6px;
+  opacity: 0; transition: opacity .2s ease;
+}
+.card:hover .card-actions{ opacity: 1; }
+.icon-btn{
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(10,10,15,0.7); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--paper);
+  transition: all .15s ease;
+}
+.icon-btn:hover{ background: var(--amber); color: var(--ink-950); }
+.icon-btn.danger:hover{ background: var(--danger); color: white; }
+.icon-btn svg{ width: 15px; height: 15px; }
+
+.empty-state{
+  text-align: center; padding: 90px 20px; color: var(--muted);
+}
+.empty-state .glyph{ font-size: 38px; margin-bottom: 14px; opacity: 0.6; }
+.empty-state h3{ font-family: var(--serif); color: var(--paper); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
+.empty-state p{ font-size: 14px; max-width: 360px; margin: 0 auto; line-height: 1.6; }
+
+/* ---------- AUTH GATE ---------- */
+.auth-shell{
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
+}
+.auth-card{
+  width: 100%; max-width: 400px;
+  background: var(--ink-900);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-lift);
+}
+.auth-card .brand{ justify-content: center; margin-bottom: 6px; }
+.auth-sub{ text-align: center; color: var(--muted); font-size: 13.5px; margin-bottom: 28px; }
+
+.field{ margin-bottom: 16px; }
+.field label{ display: block; font-size: 12.5px; font-weight: 600; color: var(--paper-dim); margin-bottom: 6px; }
+.field input{
+  width: 100%;
+  background: var(--ink-850);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: border-color .15s ease;
+}
+.field input:focus{ border-color: var(--amber-dim); outline: none; }
+.field input:focus-visible{ outline: 2px solid var(--amber); outline-offset: 1px; }
+.field-hint{ font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+
+.strength-meter{ display: flex; gap: 4px; margin-top: 7px; }
+.strength-bar{ height: 3px; flex: 1; border-radius: 2px; background: var(--ink-700); transition: background .2s ease; }
+.strength-bar.on-weak{ background: var(--danger); }
+.strength-bar.on-mid{ background: var(--amber); }
+.strength-bar.on-strong{ background: var(--ok); }
+
+.auth-submit{ width: 100%; padding: 12px; font-size: 14.5px; margin-top: 6px; }
+.auth-switch{ text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
+.auth-switch button{ background: none; border: none; color: var(--amber); font-weight: 600; padding: 0; }
+
+.alert{
+  font-size: 13px; padding: 10px 13px; border-radius: var(--radius-sm); margin-bottom: 16px;
+  border: 1px solid transparent; line-height: 1.5;
+}
+.alert-error{ background: rgba(217,104,95,0.1); border-color: rgba(217,104,95,0.35); color: #f2a39c; }
+.alert-ok{ background: rgba(127,184,143,0.1); border-color: rgba(127,184,143,0.35); color: var(--ok); }
+
+/* ---------- MODAL (lightbox / upload) ---------- */
+.modal-backdrop{
+  position: fixed; inset: 0; background: rgba(5,5,8,0.78);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 24px;
+  animation: fadeIn .15s ease;
+}
+@keyframes fadeIn{ from{ opacity: 0; } to{ opacity: 1; } }
+
+.modal{
+  background: var(--ink-900); border: 1px solid var(--line); border-radius: var(--radius);
+  max-width: 480px; width: 100%; padding: 28px; box-shadow: var(--shadow-lift);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h2{ font-family: var(--serif); font-size: 21px; margin: 0 0 4px; font-weight: 500; }
+.modal .modal-sub{ color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+.modal-close{
+  float: right; background: var(--ink-850); border: 1px solid var(--line);
+  width: 30px; height: 30px; border-radius: 50%; color: var(--paper-dim);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.lightbox{
+  max-width: 920px; width: 100%; padding: 0; display: flex; background: var(--ink-900);
+  border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line);
+}
+.lightbox img{ max-height: 86vh; width: auto; max-width: 60%; object-fit: contain; background: var(--ink-950); }
+.lightbox-info{ padding: 28px; width: 320px; display: flex; flex-direction: column; }
+.lightbox-info h2{ font-family: var(--serif); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
+.lightbox-info p{ color: var(--paper-dim); font-size: 13.5px; line-height: 1.6; margin: 0 0 20px; }
+.lightbox-actions{ margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 720px){
+  .lightbox{ flex-direction: column; max-height: 92vh; }
+  .lightbox img{ max-width: 100%; max-height: 50vh; }
+  .lightbox-info{ width: auto; }
+}
+
+.dropzone{
+  border: 2px dashed var(--line); border-radius: var(--radius-sm);
+  padding: 28px; text-align: center; color: var(--muted); font-size: 13px;
+  cursor: pointer; transition: all .15s ease; margin-bottom: 16px;
+}
+.dropzone:hover, .dropzone.drag{ border-color: var(--amber-dim); background: rgba(227,164,88,0.04); color: var(--paper-dim); }
+.dropzone strong{ color: var(--amber); display: block; margin-bottom: 4px; font-size: 14px; }
+.dropzone input{ display: none; }
+.preview-thumb{ width: 100%; max-height: 220px; object-fit: contain; border-radius: var(--radius-sm); margin-bottom: 16px; }
+
+.toast-stack{ position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+.toast{
+  background: var(--ink-900); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 16px; font-size: 13.5px; box-shadow: var(--shadow-lift);
+  display: flex; align-items: center; gap: 10px; min-width: 240px;
+  animation: slideIn .2s ease;
+}
+@keyframes slideIn{ from{ transform: translateX(20px); opacity: 0; } to{ transform: translateX(0); opacity: 1; } }
+.toast.ok{ border-left: 3px solid var(--ok); }
+.toast.error{ border-left: 3px solid var(--danger); }
+
+.loader-ring{
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--ink-700); border-top-color: var(--amber);
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+.page-loader{ flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 14px; }
+
+.hidden{ display: none !important; }
+
+footer{
+  text-align: center; padding: 22px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line);
+}
+
+@media (max-width: 680px){
+  header.topbar{ padding: 12px 14px; gap: 10px; }
+  .search-wrap{ display: none; }
+  .brand small{ display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="app" class="app">
+  <div class="page-loader" id="bootLoader">
+    <div class="loader-ring"></div> carregando lumen…
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* ============================================================
+   CONFIG SUPABASE
+   ============================================================ */
+const SUPABASE_URL = "https://wpqbvxbmracrtmketehu.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_wWManFrgqCIfyVKryOugvA_hMEG2O7m";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
+});
+
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const state = {
+  session: null,
+  profile: null,       // { id, username, role }
+  view: "feed",         // feed | private | auth
+  authMode: "login",    // login | signup
+  category: "todos",
+  search: "",
+  wallpapers: [],
+  privateWallpapers: [],
+};
+
+const CATEGORIES = ["todos", "natureza", "minimalista", "abstrato", "anime", "cidade", "espaço", "arte", "escuro", "outros"];
+
+/* ============================================================
+   HELPERS DE SEGURANÇA / VALIDAÇÃO
+   ============================================================ */
+
+// Sanitiza qualquer string antes de injetar como texto (defesa extra além do uso de textContent)
+function escapeHTML(str){
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+// Valida formato de e-mail no client (validação real e definitiva é feita pelo Supabase Auth)
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Username: 3-20 chars, letras/números/_ apenas — evita injeção em paths de storage e XSS
+function isValidUsername(u){
+  return /^[a-zA-Z0-9_]{3,20}$/.test(u);
+}
+
+// Avalia força de senha (heurística client-side; a senha em si nunca é armazenada por nós —
+// o Supabase Auth faz o hashing com bcrypt no servidor, nunca vemos nem guardamos o hash)
+function passwordStrength(pw){
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 2) return "weak";
+  if (score <= 4) return "mid";
+  return "strong";
+}
+
+function sanitizeFilename(name){
+  return name.toLowerCase().replace(/[^a-z0-9.\-]+/g, "-").replace(/-+/g, "-").slice(-80);
+}
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_FILE_MB = 12;
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(msg, type = "ok"){
+  const stack = document.getElementById("toastStack");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .25s"; setTimeout(() => el.remove(), 250); }, 3200);
+}
+
+/* ============================================================
+   AUTH — login / cadastro / logout
+   ============================================================ */
+async function signUp(email, password, username){
+  if (!isValidEmail(email)) return { error: "E-mail inválido." };
+  if (!isValidUsername(username)) return { error: "Nome de usuário deve ter 3-20 caracteres (letras, números, _)." };
+  if (passwordStrength(password) === "weak") return { error: "Escolha uma senha mais forte (mín. 8 caracteres, misture letras e números)." };
+
+  // checa unicidade do username antes de tentar (RLS permite select pra authenticated apenas,
+  // então essa checagem de fato roda no signUp via metadata + trigger; erros de duplicidade
+  // vêm do constraint UNIQUE no banco)
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { username } }
+  });
+  if (error) return { error: translateAuthError(error.message) };
+  return { data };
+}
+
+async function signIn(email, password){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) return { error: translateAuthError(error.message) };
+  return { data };
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+}
+
+function translateAuthError(msg){
+  const map = {
+    "Invalid login credentials": "E-mail ou senha incorretos.",
+    "User already registered": "Já existe uma conta com esse e-mail.",
+    "Email not confirmed": "Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).",
+    "Password should be at least 6 characters": "A senha deve ter pelo menos 6 caracteres.",
+  };
+  for (const k in map) if (msg.includes(k)) return map[k];
+  return msg;
+}
+
+async function loadProfile(userId){
+  const { data, error } = await sb.from("profiles").select("id, username, role").eq("id", userId).single();
+  if (error){ console.error("Erro ao carregar perfil:", error); return null; }
+  return data;
+}
+
+/* ============================================================
+   DATA — feed público + pasta privada
+   ============================================================ */
+async function fetchPublicWallpapers(){
+  const { data, error } = await sb.from("wallpapers").select("*").order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar wallpapers.", "error"); return []; }
+  return data.map(w => ({ ...w, url: sb.storage.from("public-wallpapers").getPublicUrl(w.storage_path).data.publicUrl }));
+}
+
+async function fetchPrivateWallpapers(userId){
+  const { data, error } = await sb.from("private_wallpapers").select("*").eq("owner_id", userId).order("created_at", { ascending: false });
+  if (error){ toast("Erro ao carregar sua pasta privada.", "error"); return []; }
+  const withUrls = await Promise.all(data.map(async w => {
+    const { data: signed } = await sb.storage.from("private-wallpapers").createSignedUrl(w.storage_path, 3600);
+    return { ...w, url: signed?.signedUrl };
+  }));
+  return withUrls;
+}
+
+async function uploadPublicWallpaper({ file, title, description, category }){
+  const ext = file.name.split(".").pop();
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage.from("public-wallpapers").upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: upErr.message };
+
+  const dims = await getImageDimensions(file);
+  const { error: dbErr } = await sb.from("wallpapers").insert({
+    title, description, category, storage_path: path,
+    width: dims.width, height: dims.height, created_by: state.profile.id
+  });
+  if (dbErr){ await sb.storage.from("public-wallpapers").remove([path]); return { error: dbErr.message }; }
+  return { ok: true };
+}
+
+async function uploadPrivateWallpaper({ file, title }){
+  const ext = file.name.split(".").pop();
+  const path = `${state.session.user.id}/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await sb.storage.from("private-wallpapers").upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: upErr.message };
+
+  const dims = await getImageDimensions(file);
+  const { error: dbErr } = await sb.from("private_wallpapers").insert({
+    owner_id: state.session.user.id, title, storage_path: path, width: dims.width, height: dims.height
+  });
+  if (dbErr){ await sb.storage.from("private-wallpapers").remove([path]); return { error: dbErr.message }; }
+  return { ok: true };
+}
+
+async function deletePublicWallpaper(w){
+  await sb.storage.from("public-wallpapers").remove([w.storage_path]);
+  const { error } = await sb.from("wallpapers").delete().eq("id", w.id);
+  return { error };
+}
+
+async function deletePrivateWallpaper(w){
+  await sb.storage.from("private-wallpapers").remove([w.storage_path]);
+  const { error } = await sb.from("private_wallpapers").delete().eq("id", w.id);
+  return { error };
+}
+
+function getImageDimensions(file){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.width, height: img.height });
+    img.onerror = () => resolve({ width: null, height: null });
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function validateImageFile(file){
+  if (!ALLOWED_MIME.includes(file.type)) return "Formato não suportado. Use JPG, PNG, WEBP ou AVIF.";
+  if (file.size > MAX_FILE_MB * 1024 * 1024) return `Arquivo muito grande (máx. ${MAX_FILE_MB}MB).`;
+  return null;
+}
+
+/* ============================================================
+   RENDER — shell raiz
+   ============================================================ */
+function render(){
+  const app = document.getElementById("app");
+  if (!state.session){
+    app.innerHTML = "";
+    app.appendChild(renderAuthGate());
+    return;
+  }
+  app.innerHTML = "";
+  app.appendChild(renderHeader());
+  const mainEl = document.createElement("main");
+  mainEl.appendChild(renderCategoryRail());
+  mainEl.appendChild(renderGrid());
+  app.appendChild(mainEl);
+  app.appendChild(renderFooter());
+}
+
+/* ---------- HEADER ---------- */
+function renderHeader(){
+  const header = document.createElement("header");
+  header.className = "topbar";
+
+  const isAdmin = state.profile?.role === "admin";
+  const initials = (state.profile?.username || "?").slice(0, 2).toUpperCase();
+
+  header.innerHTML = `
+    <div class="brand"><span class="dot"></span><div><div>Lumen</div><small>Wallpapers</small></div></div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Buscar wallpapers…" value="${escapeHTML(state.search)}" ${state.view === "private" ? "disabled" : ""}>
+    </div>
+    <div class="nav-actions">
+      <button class="tab-btn ${state.view === "feed" ? "active" : ""}" id="tabFeed">Galeria</button>
+      <button class="tab-btn ${state.view === "private" ? "active" : ""}" id="tabPrivate">Minha pasta</button>
+      ${isAdmin ? `<button class="btn btn-primary btn-sm" id="btnUploadPublic">+ Postar</button>` : ""}
+      ${state.view === "private" ? `<button class="btn btn-sm" id="btnUploadPrivate">+ Adicionar</button>` : ""}
+      <div class="avatar-chip">
+        <div class="avatar-circle">${initials}</div>
+        <span>${escapeHTML(state.profile?.username || "")}</span>
+        ${isAdmin ? `<span class="role-badge">admin</span>` : ""}
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Sair</button>
+    </div>
+  `;
+
+  header.querySelector("#tabFeed").onclick = () => { state.view = "feed"; render(); refreshCurrentView(); };
+  header.querySelector("#tabPrivate").onclick = () => { state.view = "private"; render(); refreshCurrentView(); };
+  header.querySelector("#btnLogout").onclick = async () => { await signOut(); };
+
+  const searchInput = header.querySelector("#searchInput");
+  if (searchInput){
+    searchInput.oninput = debounce((e) => { state.search = e.target.value; renderMainOnly(); }, 200);
+  }
+
+  const btnUploadPublic = header.querySelector("#btnUploadPublic");
+  if (btnUploadPublic) btnUploadPublic.onclick = () => openUploadModal("public");
+
+  const btnUploadPrivate = header.querySelector("#btnUploadPrivate");
+  if (btnUploadPrivate) btnUploadPrivate.onclick = () => openUploadModal("private");
+
+  return header;
+}
+
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+/* ---------- CATEGORY RAIL ---------- */
+function renderCategoryRail(){
+  const wrap = document.createElement("div");
+  if (state.view === "private") return wrap; // sem categorias na pasta privada
+  wrap.className = "category-rail";
+  wrap.innerHTML = CATEGORIES.map(c =>
+    `<button class="chip ${state.category === c ? "active" : ""}" data-cat="${c}">${c[0].toUpperCase()}${c.slice(1)}</button>`
+  ).join("");
+  wrap.querySelectorAll(".chip").forEach(chip => {
+    chip.onclick = () => { state.category = chip.dataset.cat; renderMainOnly(); };
+  });
+  return wrap;
+}
+
+/* ---------- GRID ---------- */
+function renderGrid(){
+  const wrap = document.createElement("div");
+  wrap.id = "gridWrap";
+
+  const isPrivate = state.view === "private";
+  let items = isPrivate ? state.privateWallpapers : state.wallpapers;
+
+  if (!isPrivate){
+    if (state.category !== "todos") items = items.filter(w => w.category === state.category);
+    if (state.search.trim()){
+      const q = state.search.trim().toLowerCase();
+      items = items.filter(w => w.title.toLowerCase().includes(q) || (w.description || "").toLowerCase().includes(q));
+    }
+  }
+
+  if (items.length === 0){
+    wrap.innerHTML = renderEmptyState(isPrivate);
+    return wrap;
+  }
+
+  const grid = document.createElement("div");
+  grid.className = "masonry";
+
+  items.forEach(w => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const ratio = w.width && w.height ? `${w.width}/${w.height}` : "3/4";
+    card.innerHTML = `
+      <img src="${escapeHTML(w.url)}" alt="${escapeHTML(w.title)}" loading="lazy" style="aspect-ratio:${ratio}">
+      <div class="card-overlay">
+        <div class="card-title">${escapeHTML(w.title)}</div>
+        ${!isPrivate ? `<div class="card-meta">${escapeHTML(w.category)}</div>` : ""}
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn" title="Baixar" data-action="download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        ${(isPrivate || state.profile?.role === "admin") ? `
+        <button class="icon-btn danger" title="Excluir" data-action="delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>` : ""}
+      </div>
+    `;
+    card.querySelector("img").onclick = () => openLightbox(w, isPrivate);
+    card.querySelector('[data-action="download"]').onclick = (e) => { e.stopPropagation(); downloadImage(w); };
+    const delBtn = card.querySelector('[data-action="delete"]');
+    if (delBtn) delBtn.onclick = (e) => { e.stopPropagation(); confirmDelete(w, isPrivate); };
+    grid.appendChild(card);
+  });
+
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderEmptyState(isPrivate){
+  if (isPrivate){
+    return `<div class="empty-state">
+      <div class="glyph">◐</div>
+      <h3>Sua pasta privada está vazia</h3>
+      <p>Envie wallpapers que só você pode ver. Ninguém mais — nem o admin — tem acesso aqui.</p>
+    </div>`;
+  }
+  return `<div class="empty-state">
+    <div class="glyph">◐</div>
+    <h3>Nada por aqui ainda</h3>
+    <p>${state.search ? "Nenhum resultado para essa busca." : "Novos wallpapers aparecem assim que o admin publica."}</p>
+  </div>`;
+}
+
+function renderMainOnly(){
+  const mainEl = document.querySelector("main");
+  if (!mainEl) return;
+  mainEl.innerHTML = "";
+  mainEl.appendChild(renderCategoryRail());
+  mainEl.appendChild(renderGrid());
+}
+
+function renderFooter(){
+  const f = document.createElement("footer");
+  f.textContent = "Lumen — sua galeria de wallpapers.";
+  return f;
+}
+
+/* ============================================================
+   DOWNLOAD / DELETE actions
+   ============================================================ */
+async function downloadImage(w){
+  try{
+    const res = await fetch(w.url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = sanitizeFilename(w.title || "wallpaper") + "." + (w.storage_path.split(".").pop());
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(e){
+    toast("Não foi possível baixar a imagem.", "error");
+  }
+}
+
+function confirmDelete(w, isPrivate){
+  if (!confirm(`Excluir "${w.title}"? Essa ação não pode ser desfeita.`)) return;
+  (async () => {
+    const { error } = isPrivate ? await deletePrivateWallpaper(w) : await deletePublicWallpaper(w);
+    if (error){ toast("Erro ao excluir.", "error"); return; }
+    toast("Excluído com sucesso.");
+    await refreshCurrentView();
+  })();
+}
+
+/* ============================================================
+   LIGHTBOX
+   ============================================================ */
+function openLightbox(w, isPrivate){
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="lightbox">
+      <img src="${escapeHTML(w.url)}" alt="${escapeHTML(w.title)}">
+      <div class="lightbox-info">
+        <button class="modal-close" id="lbClose">✕</button>
+        <h2>${escapeHTML(w.title)}</h2>
+        <p>${escapeHTML(w.description || (isPrivate ? "Item da sua pasta privada." : ""))}</p>
+        <div class="lightbox-actions">
+          <button class="btn btn-primary" id="lbDownload">Baixar</button>
+          ${(isPrivate || state.profile?.role === "admin") ? `<button class="btn btn-danger" id="lbDelete">Excluir</button>` : ""}
+        </div>
+      </div>
+    </div>
+  `;
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  backdrop.querySelector("#lbClose").onclick = () => backdrop.remove();
+  backdrop.querySelector("#lbDownload").onclick = () => downloadImage(w);
+  const delBtn = backdrop.querySelector("#lbDelete");
+  if (delBtn) delBtn.onclick = () => { backdrop.remove(); confirmDelete(w, isPrivate); };
+  document.body.appendChild(backdrop);
+}
+
+/* ============================================================
+   UPLOAD MODAL
+   ============================================================ */
+function openUploadModal(target){
+  // target: "public" (admin) | "private" (usuário)
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <button class="modal-close" id="upClose">✕</button>
+    <h2>${target === "public" ? "Postar no feed público" : "Adicionar à pasta privada"}</h2>
+    <div class="modal-sub">${target === "public" ? "Visível para todos os usuários." : "Visível apenas para você."}</div>
+    <div id="upAlert"></div>
+    <label class="dropzone" id="dropzone">
+      <strong>Clique ou arraste uma imagem</strong>
+      JPG, PNG, WEBP ou AVIF — até ${MAX_FILE_MB}MB
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/avif">
+    </label>
+    <img class="preview-thumb hidden" id="previewThumb">
+    <div class="field">
+      <label for="upTitle">Título</label>
+      <input type="text" id="upTitle" maxlength="80" placeholder="Ex: Montanhas ao amanhecer">
+    </div>
+    ${target === "public" ? `
+    <div class="field">
+      <label for="upDesc">Descrição (opcional)</label>
+      <input type="text" id="upDesc" maxlength="200" placeholder="Conte algo sobre essa imagem">
+    </div>
+    <div class="field">
+      <label for="upCat">Categoria</label>
+      <select id="upCat" style="width:100%;background:var(--ink-850);border:1px solid var(--line);color:var(--paper);padding:11px 13px;border-radius:8px;font-size:14px;">
+        ${CATEGORIES.filter(c => c !== "todos").map(c => `<option value="${c}">${c[0].toUpperCase()}${c.slice(1)}</option>`).join("")}
+      </select>
+    </div>` : ""}
+    <button class="btn btn-primary auth-submit" id="upSubmit">Enviar</button>
+  `;
+  backdrop.appendChild(modal);
+  backdrop.onclick = (e) => { if (e.target === backdrop) backdrop.remove(); };
+  modal.querySelector("#upClose").onclick = () => backdrop.remove();
+  document.body.appendChild(backdrop);
+
+  let selectedFile = null;
+  const dropzone = modal.querySelector("#dropzone");
+  const fileInput = modal.querySelector("#fileInput");
+  const previewThumb = modal.querySelector("#previewThumb");
+  const alertBox = modal.querySelector("#upAlert");
+
+  function handleFile(file){
+    const err = validateImageFile(file);
+    if (err){ alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(err)}</div>`; return; }
+    alertBox.innerHTML = "";
+    selectedFile = file;
+    previewThumb.src = URL.createObjectURL(file);
+    previewThumb.classList.remove("hidden");
+  }
+
+  fileInput.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+  dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add("drag"); };
+  dropzone.ondragleave = () => dropzone.classList.remove("drag");
+  dropzone.ondrop = (e) => {
+    e.preventDefault(); dropzone.classList.remove("drag");
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  };
+
+  modal.querySelector("#upSubmit").onclick = async () => {
+    const title = modal.querySelector("#upTitle").value.trim();
+    if (!selectedFile){ alertBox.innerHTML = `<div class="alert alert-error">Selecione uma imagem.</div>`; return; }
+    if (!title){ alertBox.innerHTML = `<div class="alert alert-error">Dê um título à imagem.</div>`; return; }
+
+    const submitBtn = modal.querySelector("#upSubmit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Enviando…";
+
+    let result;
+    if (target === "public"){
+      const description = modal.querySelector("#upDesc").value.trim();
+      const category = modal.querySelector("#upCat").value;
+      result = await uploadPublicWallpaper({ file: selectedFile, title, description, category });
+    } else {
+      result = await uploadPrivateWallpaper({ file: selectedFile, title });
+    }
+
+    if (result.error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(result.error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Enviar";
+      return;
+    }
+
+    toast("Wallpaper enviado!");
+    backdrop.remove();
+    await refreshCurrentView();
+  };
+}
+
+/* ============================================================
+   AUTH GATE (tela de login / cadastro)
+   ============================================================ */
+function renderAuthGate(){
+  const shell = document.createElement("div");
+  shell.className = "auth-shell";
+
+  const card = document.createElement("div");
+  card.className = "auth-card";
+
+  const isLogin = state.authMode === "login";
+
+  card.innerHTML = `
+    <div class="brand"><span class="dot"></span><div>Lumen</div></div>
+    <div class="auth-sub">${isLogin ? "Entre para ver a galeria completa." : "Crie sua conta para começar."}</div>
+    <div id="authAlert"></div>
+    <form id="authForm">
+      ${!isLogin ? `
+      <div class="field">
+        <label for="username">Nome de usuário</label>
+        <input type="text" id="username" autocomplete="username" placeholder="seu_usuario" required>
+        <div class="field-hint">3–20 caracteres, letras, números e underscore.</div>
+      </div>` : ""}
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" autocomplete="email" placeholder="voce@email.com" required>
+      </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" autocomplete="${isLogin ? "current-password" : "new-password"}" placeholder="••••••••" required minlength="6">
+        ${!isLogin ? `
+        <div class="strength-meter">
+          <div class="strength-bar" id="bar1"></div>
+          <div class="strength-bar" id="bar2"></div>
+          <div class="strength-bar" id="bar3"></div>
+        </div>
+        <div class="field-hint" id="strengthLabel">Mínimo de 8 caracteres, misture letras, números e símbolos.</div>` : ""}
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">${isLogin ? "Entrar" : "Criar conta"}</button>
+    </form>
+    <div class="auth-switch">
+      ${isLogin ? "Ainda não tem conta?" : "Já tem conta?"}
+      <button id="switchMode">${isLogin ? "Cadastre-se" : "Entrar"}</button>
+    </div>
+  `;
+
+  shell.appendChild(card);
+
+  card.querySelector("#switchMode").onclick = () => {
+    state.authMode = isLogin ? "signup" : "login";
+    render();
+  };
+
+  if (!isLogin){
+    const pwInput = card.querySelector("#password");
+    pwInput.oninput = () => {
+      const s = passwordStrength(pwInput.value);
+      const bars = [card.querySelector("#bar1"), card.querySelector("#bar2"), card.querySelector("#bar3")];
+      bars.forEach(b => b.className = "strength-bar");
+      const label = card.querySelector("#strengthLabel");
+      if (pwInput.value.length === 0){ label.textContent = "Mínimo de 8 caracteres, misture letras, números e símbolos."; return; }
+      if (s === "weak"){ bars[0].classList.add("on-weak"); label.textContent = "Senha fraca."; }
+      if (s === "mid"){ bars[0].classList.add("on-mid"); bars[1].classList.add("on-mid"); label.textContent = "Senha razoável."; }
+      if (s === "strong"){ bars.forEach(b => b.classList.add("on-strong")); label.textContent = "Senha forte."; }
+    };
+  }
+
+  card.querySelector("#authForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const alertBox = card.querySelector("#authAlert");
+    const submitBtn = card.querySelector("#authSubmit");
+    alertBox.innerHTML = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Aguarde…";
+
+    const email = card.querySelector("#email").value.trim();
+    const password = card.querySelector("#password").value;
+
+    let result;
+    if (isLogin){
+      result = await signIn(email, password);
+    } else {
+      const username = card.querySelector("#username").value.trim();
+      result = await signUp(email, password, username);
+    }
+
+    if (result.error){
+      alertBox.innerHTML = `<div class="alert alert-error">${escapeHTML(result.error)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = isLogin ? "Entrar" : "Criar conta";
+      return;
+    }
+
+    if (!isLogin){
+      // Se a confirmação por e-mail estiver ativa no projeto, não haverá sessão ainda
+      if (!result.data.session){
+        alertBox.innerHTML = `<div class="alert alert-ok">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Criar conta";
+        return;
+      }
+    }
+    // onAuthStateChange cuida do resto
+  };
+
+  return shell;
+}
+
+/* ============================================================
+   REFRESH / BOOTSTRAP
+   ============================================================ */
+async function refreshCurrentView(){
+  if (!state.session) return;
+  if (state.view === "feed"){
+    state.wallpapers = await fetchPublicWallpapers();
+  } else {
+    state.privateWallpapers = await fetchPrivateWallpapers(state.session.user.id);
+  }
+  renderMainOnly();
+}
+
+async function bootstrap(){
+  const { data: { session } } = await sb.auth.getSession();
+  state.session = session;
+
+  if (session){
+    state.profile = await loadProfile(session.user.id);
+    state.wallpapers = await fetchPublicWallpapers();
+  }
+  render();
+}
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  state.session = session;
+  if (session){
+    if (!state.profile || state.profile.id !== session.user.id){
+      state.profile = await loadProfile(session.user.id);
+    }
+    state.view = "feed";
+    state.wallpapers = await fetchPublicWallpapers();
+  } else {
+    state.profile = null;
+    state.wallpapers = [];
+    state.privateWallpapers = [];
+    state.authMode = "login";
+  }
+  render();
+});
+
+bootstrap();
+</script>
+</body>
+</html>
