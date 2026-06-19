@@ -607,18 +607,6 @@ footer{
    ============================================================ */
 const SUPABASE_URL = "https://wpqbvxbmracrtmketehu.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_wWManFrgqCIfyVKryOugvA_hMEG2O7m";
-
-if (typeof supabase === "undefined"){
-  document.getElementById("app").innerHTML = `
-    <div class="page-loader" style="flex-direction:column; gap:14px; text-align:center; padding:20px;">
-      <div style="color:var(--danger); font-size:15px; font-weight:600;">Não foi possível carregar uma biblioteca necessária (Supabase).</div>
-      <div style="color:var(--muted); font-size:13px; max-width:420px;">Verifique sua conexão com a internet ou se algum bloqueador de anúncios/rastreadores está impedindo o carregamento de cdn.jsdelivr.net, e recarregue a página.</div>
-      <button class="btn btn-primary btn-sm" onclick="location.reload()">Tentar de novo</button>
-    </div>
-  `;
-  throw new Error("Supabase SDK não carregou do CDN.");
-}
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
 });
@@ -2430,18 +2418,41 @@ async function refreshCurrentView(){
   renderMainOnly();
 }
 
+function withTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Tempo esgotado ao ${label} (sem resposta do servidor).`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function bootstrap(){
   try {
-    const { data: { session } } = await sb.auth.getSession();
+    const { data: { session }, error: sessionError } = await withTimeout(sb.auth.getSession(), 15000, "verificar sessão");
+    if (sessionError) throw sessionError;
     state.session = session;
 
     if (session){
-      state.profile = await loadProfile(session.user.id);
+      // Cada chamada é isolada: se uma falhar, as outras ainda completam
+      // e o app renderiza com o que conseguiu carregar, em vez de travar.
+      state.profile = await loadProfile(session.user.id).catch(err => {
+        console.error("Erro ao carregar perfil:", err);
+        return null;
+      });
       state.blocked = computeBlockStatus(state.profile);
-      state.categories = await fetchCategories();
+      state.categories = await fetchCategories().catch(err => {
+        console.error("Erro ao carregar categorias:", err);
+        return [];
+      });
       if (!state.blocked){
-        state.wallpapers = await fetchPublicWallpapers();
-        state.notifications = await fetchMyNotifications();
+        state.wallpapers = await fetchPublicWallpapers().catch(err => {
+          console.error("Erro ao carregar wallpapers:", err);
+          return [];
+        });
+        state.notifications = await fetchMyNotifications().catch(err => {
+          console.error("Erro ao carregar notificações:", err);
+          return [];
+        });
       }
     }
     render();
@@ -2459,30 +2470,47 @@ async function bootstrap(){
 }
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  state.session = session;
-  if (session){
-    if (!state.profile || state.profile.id !== session.user.id){
-      state.profile = await loadProfile(session.user.id);
+  try {
+    state.session = session;
+    if (session){
+      if (!state.profile || state.profile.id !== session.user.id){
+        state.profile = await loadProfile(session.user.id).catch(err => {
+          console.error("Erro ao carregar perfil:", err);
+          return null;
+        });
+      }
+      state.blocked = computeBlockStatus(state.profile);
+      state.categories = await fetchCategories().catch(err => {
+        console.error("Erro ao carregar categorias:", err);
+        return [];
+      });
+      if (!state.blocked){
+        state.view = "feed";
+        state.wallpapers = await fetchPublicWallpapers().catch(err => {
+          console.error("Erro ao carregar wallpapers:", err);
+          return [];
+        });
+        state.notifications = await fetchMyNotifications().catch(err => {
+          console.error("Erro ao carregar notificações:", err);
+          return [];
+        });
+      }
+    } else {
+      state.profile = null;
+      state.wallpapers = [];
+      state.boards = [];
+      state.activeBoard = null;
+      state.boardItems = [];
+      state.profileView = null;
+      state.authMode = "login";
+      state.blocked = null;
+      state.notifications = [];
     }
-    state.blocked = computeBlockStatus(state.profile);
-    state.categories = await fetchCategories();
-    if (!state.blocked){
-      state.view = "feed";
-      state.wallpapers = await fetchPublicWallpapers();
-      state.notifications = await fetchMyNotifications();
-    }
-  } else {
-    state.profile = null;
-    state.wallpapers = [];
-    state.boards = [];
-    state.activeBoard = null;
-    state.boardItems = [];
-    state.profileView = null;
-    state.authMode = "login";
-    state.blocked = null;
-    state.notifications = [];
+    render();
+  } catch (err){
+    console.error("Erro ao processar mudança de sessão:", err);
+    toast("Algo deu errado ao atualizar sua sessão. Recarregue a página.", "error");
   }
-  render();
 });
 
 bootstrap();
