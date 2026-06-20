@@ -2400,11 +2400,19 @@ function renderAuthGate(){
     const password = card.querySelector("#password").value;
 
     let result;
-    if (isLogin){
-      result = await signIn(email, password);
-    } else {
-      const username = card.querySelector("#username").value.trim();
-      result = await signUp(email, password, username);
+    try {
+      if (isLogin){
+        result = await withTimeout(signIn(email, password), 12000, "entrar");
+      } else {
+        const username = card.querySelector("#username").value.trim();
+        result = await withTimeout(signUp(email, password, username), 12000, "criar conta");
+      }
+    } catch (timeoutErr){
+      // Não deixa o botão presso em "Aguarde…" pra sempre se a chamada de
+      // rede travar (projeto pausado, instabilidade, etc.) — mesma proteção
+      // já usada no bootstrap() para getSession().
+      console.warn("[DIAG] Timeout/erro ao autenticar:", timeoutErr);
+      result = { error: timeoutErr.message || "Não foi possível conectar. Tente novamente." };
     }
 
     if (result.error){
@@ -2468,10 +2476,26 @@ async function bootstrap(){
       session = result.data.session;
     } catch (sessionErr){
       // Não deixa um getSession() travado (projeto pausado, bloqueador de
-      // anúncios, rede instável, etc.) derrubar o app inteiro: segue como
-      // deslogado, deixando a pessoa pelo menos ver a tela de login/feed
-      // público em vez de uma tela de erro fatal.
+      // anúncios, rede instável, token corrompido no localStorage, etc.)
+      // derrubar o app inteiro: segue como deslogado, deixando a pessoa pelo
+      // menos ver a tela de login/feed público em vez de uma tela de erro fatal.
       console.warn("[DIAG] Falha/timeout ao verificar sessão, seguindo como deslogado:", sessionErr);
+
+      // Se o token salvo localmente estiver corrompido/inválido, getSession()
+      // pode ficar preso pra sempre tentando processá-lo, fazendo a pessoa
+      // cair num loop de "login -> recarrega -> pede login de novo". Para
+      // evitar isso, limpamos o token guardado para que a próxima tentativa
+      // comece do zero (sem lixo) e, se persistir, peça login normalmente.
+      try {
+        const storageKey = `sb-${SUPABASE_URL.split("//")[1].split(".")[0]}-auth-token`;
+        if (localStorage.getItem(storageKey) !== null){
+          console.warn("[DIAG] Limpando token local possivelmente corrompido:", storageKey);
+          localStorage.removeItem(storageKey);
+        }
+      } catch (cleanupErr){
+        console.warn("[DIAG] Não foi possível limpar token local:", cleanupErr);
+      }
+
       toast("Não foi possível confirmar seu login agora. Tente entrar novamente se necessário.", "error");
       session = null;
     }
